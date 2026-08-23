@@ -1,0 +1,20 @@
+SECURITY AND FACTUAL-ALIGNMENT CHECK
+
+npm audit --json: exit 0, zero known vulnerabilities
+.env ignored: YES
+.env tracked: NO
+Working-tree credential-pattern matches: 0
+Git-history credential-pattern matches: 0
+Primary schema raw_body/message_body/sms_body columns: 0
+Public-page document/URL placeholder matches: 0
+Campaign answer URL placeholders: 6, intentionally retained pending deployment
+Git remotes: NONE
+
+Operational alignment verified by tests/canary:
+- JOIN/HELP/STOP/START consent rows include MessageSid, timestamp, keyword, and policy_version=2026-08-23.
+- OptOutType is recorded in the SMS ledger without storing the inbound body.
+- Managed HELP/STOP/START webhooks return empty TwiML to avoid duplicate Twilio replies.
+- STOP changes sms_status to opted_out and application/admin sends are blocked.
+- START only re-enrolls a locally opted-out volunteer; it is not accepted as first-time enrollment.
+- DROP remains event-specific.
+- One standby opening is offered to one volunteer at a time.

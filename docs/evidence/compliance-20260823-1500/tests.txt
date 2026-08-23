@@ -1,0 +1,13 @@
+COMMAND: npm test
+EXIT: 0
+
+PASS tests/db/database.test.ts (5 tests)
+PASS tests/domain/board.test.ts (8 tests)
+PASS tests/routes/public-admin.test.ts (3 tests)
+PASS tests/routes/twilio-inbound.test.ts (6 tests)
+
+Test Files: 4 passed (4)
+Tests: 22 passed (22)
+Duration: 778ms
+
+Coverage includes version-one migration, policy-version consent evidence, first-time JOIN, STOP suppression, START re-enrollment, opted-out send blocking, managed OptOutType recording, duplicate-reply suppression, signed webhook validation, DROP, standby serialization, disclosure rendering, policy clauses, links, and public routes.

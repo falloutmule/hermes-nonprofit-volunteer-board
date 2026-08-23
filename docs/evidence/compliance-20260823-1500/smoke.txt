@@ -1,0 +1,13 @@
+COMMAND: npm run smoke
+EXIT: 0
+
+/health 200
+/ 200
+/calendar/ 200
+/privacy/ 200
+/terms/ 200
+/styles.css 200
+
+The smoke check also verified that the three public compliance pages contain no document-pending or URL-template placeholder.
+
+RESULT: VERIFIED LOCAL PASS

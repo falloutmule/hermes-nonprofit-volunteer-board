@@ -1,0 +1,13 @@
+VERIFIED 2026-08-23 15:00 America/Denver
+
+Project: C:\Users\fallo\Documents\Codex\2026-08-23\files-mentioned-by-the-user-codex\outputs\hermes-nonprofit-volunteer-board
+Branch: main
+Pre-evidence HEAD: d3176b4caf2e92145bcdcf72347377f1e7b5710d
+Status before adding evidence: clean
+Remotes: none
+
+Compliance commits:
+3c30b98 docs: integrate Twilio compliance package
+d3176b4 feat: align SMS consent behavior with compliance
+
+No remote was created and no push, Pages deployment, Twilio configuration change, campaign submission, or carrier SMS occurred.

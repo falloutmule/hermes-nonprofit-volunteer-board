@@ -1,0 +1,15 @@
+COMMAND: npm run canary
+EXIT: 0
+
+{"ok":true,"signatureValidated":true,"inboundEvents":10,"confirmedSignups":1,"acceptedOffers":1,"versionedConsentEvents":6,"managedOptOutEvents":3,"optedOutSendBlocked":true,"duplicateManagedReplies":false,"capturedOutboundMessages":1,"rawBodiesPersisted":false}
+
+Synthetic path:
+- JOIN returned the approved enrollment confirmation.
+- HELP with OptOutType was recorded and returned no duplicate application message.
+- STOP/QUIT with OptOutType=STOP opted out and returned no duplicate application message.
+- Admin application send while opted out returned 409 and produced no outbound message.
+- START with OptOutType re-enrolled and returned no duplicate application message.
+- DROP/standby/YES behavior remained operational.
+
+REAL SMS CANARY: UNTESTED
+No live credentials, configured public webhook, authorized test participant, or confirmed carrier/A2P path was available. No real message was attempted.

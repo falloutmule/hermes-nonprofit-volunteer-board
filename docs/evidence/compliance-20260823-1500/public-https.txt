@@ -1,0 +1,15 @@
+EXPECTED URL CHECK — FAILED / NOT DEPLOYED
+Verified read-only on 2026-08-23:
+
+404  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/
+404  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
+404  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
+
+The repository has no Git remote. Therefore:
+- no deployed commit exists;
+- no public HTTP 200 evidence exists;
+- no public/incognito browser verification was possible;
+- the six URL template occurrences in TWILIO-A2P-CAMPAIGN-ANSWERS.md remain intentionally unchanged;
+- no placeholder URL was submitted to Twilio.
+
+The first sandboxed HTTPS attempt could not access the network. The approved read-only retry reached GitHub Pages and returned the three 404 results above.

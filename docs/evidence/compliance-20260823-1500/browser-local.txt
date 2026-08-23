@@ -1,0 +1,26 @@
+LOCAL BROWSER VERIFICATION
+Browser: Codex in-app browser
+Viewport: 390 × 844
+Origin: http://127.0.0.1:8798
+
+Verified rendered behavior:
+- Home title: Hermes Non-Profit Volunteer SMS Testing
+- Sender identity: Hermes Non-Profit
+- CTA: sms:+19704708839?body=JOIN
+- Disclosure includes recurring automated messages, 1–8 messages/test event, message/data rates, STOP, and HELP.
+- Navigation traversed home → /privacy/ → /terms/ → home.
+- Privacy rendered the mobile-number and consent non-sharing clause.
+- Terms rendered START re-enrollment and the event-specific DROP distinction.
+- Pages were readable at the mobile viewport with no horizontal clipping observed.
+
+Screenshots:
+mobile-home.png
+mobile-privacy.png
+mobile-terms.png
+
+Screenshot SHA256:
+edc9450f3ed8c4702a52c25ae197c9d4b48aeaa31959865ba0b6855b7bbfef7e  mobile-home.png
+dfd6f432f72a3fdac0b7758fd55e526eb0231e34f3c501ab511aa1c63395cb55  mobile-privacy.png
+309c1d59e5c3edbaa42d16126f69c6b20e80c4aae0faafcaf1665b36138949c6  mobile-terms.png
+
+This proves local rendering only. It is not incognito/public HTTPS evidence.
