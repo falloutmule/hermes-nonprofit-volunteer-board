@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Volunteer Calendar — Hermes Non-Profit</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <main>
+    <p><a href="/">← Hermes Non-Profit</a></p>
+    <p class="eyebrow">Volunteer calendar</p>
+    <h1>Upcoming events</h1>
+    <p class="muted">No account is required. Published events appear here when organizers add them.</p>
+    <section id="events" aria-live="polite"><p>Loading events…</p></section>
+  </main>
+  <script>
+    const root = document.querySelector('#events');
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
+    fetch('/api/public/events')
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('request failed')))
+      .then(({events}) => {
+        if (!events.length) {
+          root.innerHTML = '<p class="card">No published volunteer events yet.</p>';
+          return;
+        }
+        root.innerHTML = events.map((event) => `<article class="card">
+          <h2>${escapeHtml(event.name)}</h2>
+          <p><strong>${new Date(event.startsAt).toLocaleString()}</strong></p>
+          <p>${escapeHtml(event.location || 'Location to be announced')}</p>
+          <p>${event.spotsAvailable} of ${event.capacity} spots currently available</p>
+          <a class="button" href="sms:+19704708839?body=${encodeURIComponent(event.slug)}">Text ${escapeHtml(event.slug)} to volunteer</a>
+        </article>`).join('');
+      })
+      .catch(() => { root.innerHTML = '<p class="card">The event list is temporarily unavailable.</p>'; });
+  </script>
+</body>
+</html>
