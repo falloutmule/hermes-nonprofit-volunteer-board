@@ -2,7 +2,7 @@
 
 A low-volume internal-testing volunteer board. Volunteers discover events on a public calendar and use ordinary SMS to opt in, sign up, join standby, accept an opening, or drop a specific event. SQLite and deterministic domain functions are the sole operational source of truth.
 
-> Setup phase only: the Privacy Policy, SMS Terms, opt-in disclosure, and final A2P campaign copy are intentionally pending. Do not publish the placeholders as compliance documents or submit them to Twilio.
+> Compliance drafts are integrated, but this repository has no authorized remote or verified public deployment. Do not submit the A2P campaign until the public URLs are live, directly verified, and inserted into the campaign answer sheet.
 
 ## Requirements
 
@@ -34,13 +34,14 @@ npm start
 ## SMS commands
 
 - `JOIN` records opt-in.
+- `START` records re-enrollment after opt-out.
 - A published event keyword such as `PANTRY` signs up an opted-in volunteer.
 - `DROP PANTRY` cancels that event without globally opting out.
 - `YES` or `NO` answers a single live standby offer.
 - `HELP` returns bounded instructions.
 - `STOP` records global opt-out when Twilio forwards the event.
 
-All current SMS wording is marked test copy and is not approved campaign language. Full inbound message bodies are used transiently for routing and are not persisted.
+JOIN, HELP, STOP, and START use the integrated campaign wording. Full inbound message bodies are used transiently for routing and are not persisted. Consent rows record the applicable `2026-08-23` policy version.
 
 ## Twilio webhook
 
@@ -50,7 +51,7 @@ Twilio sends form-encoded inbound SMS requests to:
 <PUBLIC_BASE_URL>/webhooks/twilio/inbound
 ```
 
-Set `PUBLIC_BASE_URL` to the exact externally visible HTTPS origin before configuring Twilio. Signature verification uses the official SDK, the request parameters, and this exact URL. Do not disable verification for local development; tests inject a synthetic token and valid synthetic signatures.
+Set `PUBLIC_BASE_URL` to the exact externally visible HTTPS origin before configuring Twilio. Signature verification uses the official SDK, the request parameters, and this exact URL. Do not disable verification for local development; tests inject a synthetic token and valid synthetic signatures. When Twilio supplies `OptOutType`, the application records it and applies the state transition but returns empty TwiML so Twilio's managed HELP/STOP/START response is not duplicated.
 
 A future local live test may use a Cloudflare Quick Tunnel, but `cloudflared` is not a dependency and no tunnel or Twilio Console change is part of this setup. A Messaging Service SID is preferred when available; otherwise the verified number is supported by the adapter where Twilio registration permits it.
 
@@ -72,7 +73,7 @@ The future Hermes integration must call this narrow API. It must not access SQLi
 
 ## Public site and future Pages deployment
 
-The app serves `/`, `/calendar/`, `/privacy/`, and `/terms/`. The HTML is static-compatible, while the calendar requests `/api/public/events`; a future static deployment must configure a reachable API origin or supply a generated event feed. No GitHub remote, Pages URL, or live deployment is assumed.
+The app serves `/`, `/calendar/`, `/privacy/`, `/terms/`, and `/styles.css`. The opt-in, Privacy, and Terms files are the integrated compliance drafts and use relative links compatible with a GitHub Pages project site. The calendar requests `/api/public/events`; a future static deployment must configure a reachable API origin or supply a generated event feed. No GitHub remote, Pages URL, or live deployment is assumed.
 
 ## Real versus synthetic status
 

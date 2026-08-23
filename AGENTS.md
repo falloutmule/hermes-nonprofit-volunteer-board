@@ -22,4 +22,4 @@
 - Do not expand this system into a CRM without explicit authorization.
 - Hermes may use the authenticated board API but must never directly mutate SQLite or receive arbitrary public SMS.
 - Do not purchase resources, submit registrations, change external configuration, create remotes, publish, or push without authorization.
-- Final Privacy Policy, SMS Terms, consent wording, and A2P campaign copy come from a separate approved phase.
+- The approved draft Privacy Policy, SMS Terms, consent wording, and A2P campaign answer sheet were integrated on August 23, 2026. Preserve their factual alignment and do not replace verified URL placeholders until publication is directly proven.
