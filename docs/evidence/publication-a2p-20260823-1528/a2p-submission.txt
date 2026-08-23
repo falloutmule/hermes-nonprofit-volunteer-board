@@ -1,0 +1,5 @@
+NOT SUBMITTED
+
+The user authorized public repository creation and Pages deployment only.
+No A2P campaign submission, purchase, external message, or Twilio Console mutation was authorized or performed.
+No campaign SID or approval status is claimed.

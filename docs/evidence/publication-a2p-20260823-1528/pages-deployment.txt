@@ -1,0 +1,14 @@
+GitHub Pages: PASS
+Build type: workflow
+Source branch: main
+Public: true
+HTTPS enforced: true
+Published URL: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/
+
+Workflow file: .github/workflows/pages.yml
+Initial run 32667443682: FAILURE because Pages was not yet enabled.
+Corrective action: enabled Pages with build_type=workflow.
+First successful run 32667488506: SUCCESS.
+Verified-URL run 32667620634: SUCCESS, deploy job completed in 10 seconds.
+
+Non-blocking annotation: GitHub forced Node-20-targeting Pages actions to Node 24.

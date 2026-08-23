@@ -1,0 +1,7 @@
+BLOCKED / NOT RUN
+
+GitHub Pages is static hosting and cannot run the Fastify POST /webhooks/twilio/inbound endpoint.
+No runtime host or tunnel was authorized in this phase. cloudflared was not installed.
+No Twilio webhook URL was changed and no live inbound request was attempted.
+
+Required next input: authorize and select a public HTTPS runtime/tunnel for the Fastify service.

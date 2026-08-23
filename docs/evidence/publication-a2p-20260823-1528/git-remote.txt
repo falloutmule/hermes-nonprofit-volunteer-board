@@ -1,0 +1,11 @@
+Repository: https://github.com/falloutmule/hermes-nonprofit-volunteer-board
+Visibility: PUBLIC
+Default branch: main
+Remote name: origin
+Remote URL: https://github.com/falloutmule/hermes-nonprofit-volunteer-board.git
+
+Publication commit: e47308878c91a6e9f6e4dbd09687c92631559816
+Verified-URL commit: d7bfa4e89916e77735b770cbac5cff15ba644e21
+Remote main at capture: d7bfa4e89916e77735b770cbac5cff15ba644e21
+
+The evidence package is committed after this capture; its containing commit is the final reported HEAD.

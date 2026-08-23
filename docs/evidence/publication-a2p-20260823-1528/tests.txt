@@ -1,0 +1,27 @@
+Command: npm test
+Exit code: 0
+
+Vitest v3.2.7
+PASS  tests/db/database.test.ts — 5 tests
+PASS  tests/domain/board.test.ts — 8 tests
+PASS  tests/routes/public-admin.test.ts — 3 tests
+PASS  tests/routes/twilio-inbound.test.ts — 6 tests
+
+Test files: 4 passed
+Tests: 22 passed
+Duration: 1.02s
+
+Command: npm run smoke
+Exit code: 0
+/health 200
+/ 200
+/calendar/ 200
+/privacy/ 200
+/terms/ 200
+/styles.css 200
+
+Command: npm run canary
+Exit code: 0
+{"ok":true,"signatureValidated":true,"inboundEvents":10,"confirmedSignups":1,"acceptedOffers":1,"versionedConsentEvents":6,"managedOptOutEvents":3,"optedOutSendBlocked":true,"duplicateManagedReplies":false,"capturedOutboundMessages":1,"rawBodiesPersisted":false}
+
+The canary is synthetic. It does not prove carrier delivery or a live Twilio webhook.

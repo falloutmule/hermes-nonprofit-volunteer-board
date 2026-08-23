@@ -1,0 +1,2 @@
+NOT RUN — real carrier HELP test was outside the authorized publication scope.
+Deterministic HELP command behavior is covered by the automated suite.

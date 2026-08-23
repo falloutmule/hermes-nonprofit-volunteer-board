@@ -1,0 +1,2 @@
+NOT RUN — real carrier STOP test was outside the authorized publication scope.
+Managed opt-out behavior and opted-out send blocking passed in the synthetic canary.

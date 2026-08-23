@@ -1,0 +1,14 @@
+SECURITY CHECK — PASS with documented public identifiers
+
+PASS  Runtime .env files tracked: 0
+PASS  .env is ignored by .gitignore
+PASS  Credential-shaped worktree matches: 0
+PASS  Credential-shaped Git-history matches: 0
+PASS  Campaign URL placeholders remaining: 0
+PASS  npm audit --omit=dev: found 0 vulnerabilities
+
+Phone-number scan found only:
+- the authorized public program number +19704708839 / +1 (970) 470-8839;
+- reserved synthetic +1 303 555 test fixtures.
+
+No private volunteer phone data, auth tokens, cookies, or raw SMS bodies were added to publication evidence.

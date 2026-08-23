@@ -1,0 +1,8 @@
+NOT RUN
+
+No Twilio Console campaign fields or messaging use cases were viewed or changed.
+Safe known identifiers:
+- Brand SID: BUaa974072c99218e603ff8db997a91560
+- Program number: +19704708839
+
+No auth token, cookies, private test-recipient number, or raw provider payload is stored here.

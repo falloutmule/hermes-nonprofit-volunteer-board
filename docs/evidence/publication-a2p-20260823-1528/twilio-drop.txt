@@ -1,0 +1,2 @@
+NOT RUN — real carrier event DROP test was outside the authorized publication scope.
+Event-specific cancellation and standby behavior are covered by the automated domain suite.

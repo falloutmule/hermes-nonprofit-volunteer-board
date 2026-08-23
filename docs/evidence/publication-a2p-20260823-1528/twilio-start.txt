@@ -1,0 +1,2 @@
+NOT RUN — real carrier START/re-enrollment test was outside the authorized publication scope.
+No Twilio Console or carrier state was changed.

@@ -1,0 +1,13 @@
+Fresh isolated in-app browser verification at 390x844
+
+PASS  Loaded the exact home, privacy, and terms HTTPS URLs.
+PASS  Page title identified Hermes Non-Profit.
+PASS  Home CTA target was exactly sms:+19704708839?body=JOIN.
+PASS  Disclosure included recurring automated messages, message/data rates, and 1–8 messages per test event.
+PASS  Privacy page stated the required non-sharing position.
+PASS  Terms page distinguished DROP for one event from STOP for program opt-out.
+
+Screenshots:
+- publication-mobile-home.png
+- publication-mobile-privacy.png
+- publication-mobile-terms.png

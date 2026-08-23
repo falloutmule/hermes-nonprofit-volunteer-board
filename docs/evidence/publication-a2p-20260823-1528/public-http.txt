@@ -1,0 +1,10 @@
+2026-08-23 HTTPS verification
+
+PASS  200  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/
+      length=2524; Hermes=true; phone=true; JOIN=true; STOP=true; HELP=true; DROP=true
+PASS  200  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
+      length=6170; Hermes=true; phone=true; STOP=true; HELP=true; DROP=true
+PASS  200  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
+      length=5015; Hermes=true; phone=true; JOIN=true; STOP=true; HELP=true; DROP=true
+
+All requested public URLs use HTTPS.

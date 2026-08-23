@@ -1,0 +1,10 @@
+PUBLICATION PREFLIGHT — 2026-08-23 15:28 America/Denver
+
+PASS  Local repository existed on main with a clean baseline.
+PASS  Build, 22-test suite, local route smoke, and synthetic signed-Twilio canary passed before publication.
+PASS  Public artifacts identify Hermes Non-Profit and +1 (970) 470-8839.
+PASS  Opt-in, Privacy Policy, and SMS Terms source pages were present.
+PASS  No tracked runtime .env file or credential-shaped token was found.
+PASS  Scope authorization covered a public GitHub repository and GitHub Pages deployment.
+
+Excluded from authorization: webhook/runtime hosting, Twilio Console changes, real SMS messages, A2P campaign mutation, and A2P submission.

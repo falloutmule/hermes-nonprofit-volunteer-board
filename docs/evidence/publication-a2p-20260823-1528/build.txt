@@ -1,0 +1,6 @@
+Command: npm run build
+Exit code: 0
+Compiler: tsc -p tsconfig.json
+Result: PASS
+
+Runtime recorded during setup: Node.js v24.14.0, npm 11.9.0.

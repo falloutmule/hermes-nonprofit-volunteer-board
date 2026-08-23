@@ -1,0 +1,13 @@
+PARTIAL / BLOCKED
+
+Completed:
+- Public opt-in URL bound and verified.
+- Public Privacy Policy URL bound and verified.
+- Public SMS Terms URL bound and verified.
+- Campaign worksheet URL placeholders removed.
+
+Blocked:
+- Public webhook/runtime not deployed.
+- Real JOIN/HELP/STOP/START/DROP behavior not carrier-tested.
+- Twilio Console form was not opened or mutated.
+- Campaign fields and samples were not asserted as submitted.
