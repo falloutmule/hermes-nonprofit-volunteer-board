@@ -1,10 +1,9 @@
-// Non-production fixtures. Replace only with approved compliance copy.
-export const PLACEHOLDER_MESSAGES = {
-  joined: "TEST COPY: You are opted in for Hermes Non-Profit volunteer texts. Reply HELP for options or STOP to opt out.",
-  help: "TEST COPY: Reply with an event keyword to volunteer, DROP <keyword> to cancel an event, or STOP to opt out.",
-  stopped: "TEST COPY: You are opted out of Hermes Non-Profit volunteer texts.",
-  joinFirst: "TEST COPY: Reply JOIN before signing up for an event.",
-  unknown: "I didn't understand that yet. Reply HELP for options.",
+export const SMS_MESSAGES = {
+  joined: "Hermes Non-Profit: You're enrolled in volunteer SMS testing. Msg frequency varies, typically 1-8 msgs/test event. Msg & data rates may apply. Reply HELP for help or STOP to opt out.",
+  help: "Hermes Non-Profit SMS Testing: Help at Falloutmule@gmail.com. Msg & data rates may apply. Reply STOP to opt out.",
+  stopped: "Hermes Non-Profit: You are unsubscribed and will receive no more messages. Reply START to re-enroll.",
+  joinFirst: "Hermes Non-Profit: Reply JOIN to enroll before signing up for an event.",
+  unknown: "Hermes Non-Profit: I didn't understand that. Reply HELP for help or STOP to opt out.",
   dropNeedsEvent: "Reply DROP followed by the event keyword, for example DROP PANTRY.",
   noSignup: "No active signup was found for that event.",
   noOffer: "There is no current standby offer for this number.",
@@ -12,5 +11,5 @@ export const PLACEHOLDER_MESSAGES = {
 } as const;
 
 export function offerMessage(eventName: string, keyword: string): string {
-  return `TEST COPY: A spot opened for ${eventName}. Reply YES to accept or NO to decline. Event keyword: ${keyword}.`;
+  return `Hermes Non-Profit: A spot opened for ${eventName}. Reply YES to accept or NO to pass. Event keyword: ${keyword}. Reply STOP to opt out.`;
 }

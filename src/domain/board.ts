@@ -1,6 +1,8 @@
 import type Database from "better-sqlite3";
-import { PLACEHOLDER_MESSAGES, offerMessage } from "./messages.js";
+import { SMS_MESSAGES, offerMessage } from "./messages.js";
 import { parseSmsIntent } from "./sms-intent.js";
+
+export const CONSENT_POLICY_VERSION = "2026-08-23";
 
 export type EventStatus = "draft" | "published" | "cancelled" | "completed";
 export type SignupStatus = "confirmed" | "standby" | "cancelled";
@@ -42,6 +44,7 @@ export interface ProcessInboundInput {
   from: string;
   body: string;
   messageSid: string;
+  optOutType?: string;
 }
 
 export interface ProcessResult {
@@ -116,10 +119,10 @@ export class VolunteerBoard {
       const inserted = this.db
         .prepare(
           `INSERT OR IGNORE INTO sms_events
-             (twilio_message_sid, direction, classification, delivery_status, created_at)
-           VALUES (?, 'inbound', 'received', 'received', ?)`,
+             (twilio_message_sid, direction, classification, twilio_opt_out_type, delivery_status, created_at)
+           VALUES (?, 'inbound', 'received', ?, 'received', ?)`,
         )
-        .run(input.messageSid, createdAt);
+        .run(input.messageSid, input.optOutType?.trim().toUpperCase() ?? null, createdAt);
 
       if (inserted.changes === 0) {
         return {
@@ -135,25 +138,34 @@ export class VolunteerBoard {
         .prepare("UPDATE sms_events SET volunteer_id = ? WHERE twilio_message_sid = ?")
         .run(volunteer.id, input.messageSid);
 
-      const intent = parseSmsIntent(input.body);
+      const optOutType = input.optOutType?.trim().toUpperCase();
+      const managedKeyword =
+        optOutType === "STOP" || optOutType === "START" || optOutType === "HELP"
+          ? optOutType
+          : null;
+      const intent = parseSmsIntent(managedKeyword ?? input.body);
+      const consentSource = managedKeyword ? "twilio_opt_out_type" : "twilio_inbound";
       let result: Omit<ProcessResult, "duplicate">;
 
       switch (intent.kind) {
         case "join":
-          result = this.join(volunteer, input.messageSid);
+          result = this.join(volunteer, input.messageSid, "JOIN", consentSource);
           break;
         case "help":
-          result = this.help(volunteer, input.messageSid);
+          result = this.help(volunteer, input.messageSid, consentSource);
           break;
         case "stop":
-          result = this.stop(volunteer, input.messageSid);
+          result = this.stop(volunteer, input.messageSid, consentSource);
+          break;
+        case "start":
+          result = this.join(volunteer, input.messageSid, "START", consentSource);
           break;
         case "drop":
           result = intent.eventKeyword
             ? this.dropByKeyword(volunteer, intent.eventKeyword)
             : {
                 classification: "drop_missing_event",
-                reply: PLACEHOLDER_MESSAGES.dropNeedsEvent,
+                reply: SMS_MESSAGES.dropNeedsEvent,
                 notifications: [],
               };
           break;
@@ -169,7 +181,7 @@ export class VolunteerBoard {
         case "unknown":
           result = {
             classification: "unknown",
-            reply: PLACEHOLDER_MESSAGES.unknown,
+            reply: SMS_MESSAGES.unknown,
             notifications: [],
           };
       }
@@ -357,7 +369,27 @@ export class VolunteerBoard {
     };
   }
 
-  private join(volunteer: VolunteerRow, messageSid: string): Omit<ProcessResult, "duplicate"> {
+  private join(
+    volunteer: VolunteerRow,
+    messageSid: string,
+    keyword: "JOIN" | "START",
+    source: "twilio_inbound" | "twilio_opt_out_type",
+  ): Omit<ProcessResult, "duplicate"> {
+    if (keyword === "JOIN" && volunteer.sms_status === "opted_out") {
+      return {
+        classification: "join_requires_start",
+        reply: SMS_MESSAGES.stopped,
+        notifications: [],
+      };
+    }
+    if (keyword === "START" && volunteer.sms_status !== "opted_out") {
+      return {
+        classification: "start_not_opted_out",
+        reply:
+          volunteer.sms_status === "opted_in" ? SMS_MESSAGES.joined : SMS_MESSAGES.joinFirst,
+        notifications: [],
+      };
+    }
     const now = timestamp();
     this.db
       .prepare("UPDATE volunteers SET sms_status = 'opted_in', updated_at = ? WHERE id = ?")
@@ -365,25 +397,37 @@ export class VolunteerBoard {
     this.db
       .prepare(
         `INSERT INTO consent_events
-          (volunteer_id, action, source, keyword, twilio_message_sid, created_at)
-         VALUES (?, 'opt_in', 'twilio_inbound', 'JOIN', ?, ?)`,
+          (volunteer_id, action, source, keyword, twilio_message_sid, policy_version, created_at)
+         VALUES (?, 'opt_in', ?, ?, ?, ?, ?)`,
       )
-      .run(volunteer.id, messageSid, now);
-    return { classification: "join", reply: PLACEHOLDER_MESSAGES.joined, notifications: [] };
+      .run(volunteer.id, source, keyword, messageSid, CONSENT_POLICY_VERSION, now);
+    return {
+      classification: keyword === "START" ? "start" : "join",
+      reply: SMS_MESSAGES.joined,
+      notifications: [],
+    };
   }
 
-  private help(volunteer: VolunteerRow, messageSid: string): Omit<ProcessResult, "duplicate"> {
+  private help(
+    volunteer: VolunteerRow,
+    messageSid: string,
+    source: "twilio_inbound" | "twilio_opt_out_type",
+  ): Omit<ProcessResult, "duplicate"> {
     this.db
       .prepare(
         `INSERT INTO consent_events
-          (volunteer_id, action, source, keyword, twilio_message_sid, created_at)
-         VALUES (?, 'help', 'twilio_inbound', 'HELP', ?, ?)`,
+          (volunteer_id, action, source, keyword, twilio_message_sid, policy_version, created_at)
+         VALUES (?, 'help', ?, 'HELP', ?, ?, ?)`,
       )
-      .run(volunteer.id, messageSid, timestamp());
-    return { classification: "help", reply: PLACEHOLDER_MESSAGES.help, notifications: [] };
+      .run(volunteer.id, source, messageSid, CONSENT_POLICY_VERSION, timestamp());
+    return { classification: "help", reply: SMS_MESSAGES.help, notifications: [] };
   }
 
-  private stop(volunteer: VolunteerRow, messageSid: string): Omit<ProcessResult, "duplicate"> {
+  private stop(
+    volunteer: VolunteerRow,
+    messageSid: string,
+    source: "twilio_inbound" | "twilio_opt_out_type",
+  ): Omit<ProcessResult, "duplicate"> {
     const now = timestamp();
     this.db
       .prepare("UPDATE volunteers SET sms_status = 'opted_out', updated_at = ? WHERE id = ?")
@@ -391,10 +435,10 @@ export class VolunteerBoard {
     this.db
       .prepare(
         `INSERT INTO consent_events
-          (volunteer_id, action, source, keyword, twilio_message_sid, created_at)
-         VALUES (?, 'opt_out', 'twilio_inbound', 'STOP', ?, ?)`,
+          (volunteer_id, action, source, keyword, twilio_message_sid, policy_version, created_at)
+         VALUES (?, 'opt_out', ?, 'STOP', ?, ?, ?)`,
       )
-      .run(volunteer.id, messageSid, now);
+      .run(volunteer.id, source, messageSid, CONSENT_POLICY_VERSION, now);
     const notifications: Notification[] = [];
     const pendingOffers = this.db
       .prepare("SELECT * FROM standby_offers WHERE volunteer_id = ? AND status = 'pending'")
@@ -407,7 +451,7 @@ export class VolunteerBoard {
         .run(now, now, offer.id);
       this.advanceOfferChain(offer.event_id, notifications);
     }
-    return { classification: "stop", reply: PLACEHOLDER_MESSAGES.stopped, notifications };
+    return { classification: "stop", reply: SMS_MESSAGES.stopped, notifications };
   }
 
   private signupByKeyword(
@@ -418,12 +462,12 @@ export class VolunteerBoard {
       .prepare("SELECT * FROM events WHERE slug = ? AND status = 'published'")
       .get(keyword) as EventRow | undefined;
     if (!event) {
-      return { classification: "unknown", reply: PLACEHOLDER_MESSAGES.unknown, notifications: [] };
+      return { classification: "unknown", reply: SMS_MESSAGES.unknown, notifications: [] };
     }
     if (volunteer.sms_status !== "opted_in") {
       return {
         classification: "signup_requires_opt_in",
-        reply: PLACEHOLDER_MESSAGES.joinFirst,
+        reply: SMS_MESSAGES.joinFirst,
         notifications: [],
       };
     }
@@ -473,8 +517,8 @@ export class VolunteerBoard {
       classification: `signup_${status}`,
       reply:
         status === "confirmed"
-          ? `TEST COPY: You are confirmed for ${event.name}. Reply DROP ${event.slug} to cancel this event.`
-          : `TEST COPY: ${event.name} is full. You are standby position ${standbyPosition}.`,
+          ? `Hermes Non-Profit: You're signed up for ${event.name}. Reply DROP ${event.slug} to cancel this event. Reply STOP to opt out of all texts.`
+          : `Hermes Non-Profit: ${event.name} is full. You are standby position ${standbyPosition}. Reply STOP to opt out.`,
       notifications: [],
     };
   }
@@ -487,7 +531,7 @@ export class VolunteerBoard {
       | EventRow
       | undefined;
     if (!event) {
-      return { classification: "drop_not_found", reply: PLACEHOLDER_MESSAGES.noSignup, notifications: [] };
+      return { classification: "drop_not_found", reply: SMS_MESSAGES.noSignup, notifications: [] };
     }
     const signup = this.db
       .prepare(
@@ -495,14 +539,14 @@ export class VolunteerBoard {
       )
       .get(event.id, volunteer.id) as SignupRow | undefined;
     if (!signup) {
-      return { classification: "drop_not_found", reply: PLACEHOLDER_MESSAGES.noSignup, notifications: [] };
+      return { classification: "drop_not_found", reply: SMS_MESSAGES.noSignup, notifications: [] };
     }
     const priorStatus = signup.status;
     const notifications: Notification[] = [];
     this.cancelSignup(signup, notifications);
     return {
       classification: `drop_${priorStatus}`,
-      reply: `TEST COPY: Your ${event.name} signup was cancelled.`,
+      reply: `Hermes Non-Profit: Your signup for ${event.name} has been cancelled. You remain enrolled in SMS testing. Reply STOP to opt out of all texts.`,
       notifications,
     };
   }
@@ -539,7 +583,7 @@ export class VolunteerBoard {
       .prepare("SELECT * FROM standby_offers WHERE volunteer_id = ? AND status = 'pending'")
       .all(volunteer.id) as OfferRow[];
     if (offers.length !== 1) {
-      return { classification: "offer_missing", reply: PLACEHOLDER_MESSAGES.noOffer, notifications: [] };
+      return { classification: "offer_missing", reply: SMS_MESSAGES.noOffer, notifications: [] };
     }
     const offer = offers[0] as OfferRow;
     const event = this.db.prepare("SELECT * FROM events WHERE id = ?").get(offer.event_id) as EventRow;
@@ -563,7 +607,7 @@ export class VolunteerBoard {
         .run(now, offer.opening_id);
       return {
         classification: "offer_conflict",
-        reply: PLACEHOLDER_MESSAGES.offerConflict,
+        reply: SMS_MESSAGES.offerConflict,
         notifications: [],
       };
     }
@@ -573,7 +617,7 @@ export class VolunteerBoard {
       )
       .run(now, now, offer.id);
     if (accepted.changes !== 1) {
-      return { classification: "offer_missing", reply: PLACEHOLDER_MESSAGES.noOffer, notifications: [] };
+      return { classification: "offer_missing", reply: SMS_MESSAGES.noOffer, notifications: [] };
     }
     this.db
       .prepare("UPDATE signups SET status = 'confirmed', updated_at = ? WHERE id = ? AND status = 'standby'")
@@ -585,7 +629,7 @@ export class VolunteerBoard {
     this.advanceOfferChain(event.id, notifications);
     return {
       classification: "offer_accepted",
-      reply: `TEST COPY: You are now confirmed for ${event.name}.`,
+      reply: `Hermes Non-Profit: You're now confirmed for ${event.name}. Reply STOP to opt out.`,
       notifications,
     };
   }
@@ -595,7 +639,7 @@ export class VolunteerBoard {
       .prepare("SELECT * FROM standby_offers WHERE volunteer_id = ? AND status = 'pending'")
       .all(volunteer.id) as OfferRow[];
     if (offers.length !== 1) {
-      return { classification: "offer_missing", reply: PLACEHOLDER_MESSAGES.noOffer, notifications: [] };
+      return { classification: "offer_missing", reply: SMS_MESSAGES.noOffer, notifications: [] };
     }
     const offer = offers[0] as OfferRow;
     const now = timestamp();
@@ -608,7 +652,7 @@ export class VolunteerBoard {
     this.advanceOfferChain(offer.event_id, notifications);
     return {
       classification: "offer_declined",
-      reply: "TEST COPY: You declined this opening and remain on standby.",
+      reply: "Hermes Non-Profit: You declined this opening and remain on standby. Reply STOP to opt out.",
       notifications,
     };
   }

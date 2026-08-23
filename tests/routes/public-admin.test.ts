@@ -23,17 +23,24 @@ afterEach(async () => {
 });
 
 describe("public and admin routes", () => {
-  it("serves health and all static pages with visible compliance placeholders", async () => {
+  it("serves the integrated disclosure, policies, stylesheet, and calendar", async () => {
     expect((await app.inject({ method: "GET", url: "/health" })).json()).toEqual({ ok: true });
     for (const path of ["/", "/calendar/", "/privacy/", "/terms/"]) {
       expect((await app.inject({ method: "GET", url: path })).statusCode).toBe(200);
     }
-    expect((await app.inject({ method: "GET", url: "/privacy/" })).body).toContain(
-      "DOCUMENT PENDING — DO NOT USE FOR A2P SUBMISSION",
-    );
-    expect((await app.inject({ method: "GET", url: "/terms/" })).body).toContain(
-      "DOCUMENT PENDING — DO NOT USE FOR A2P SUBMISSION",
-    );
+    const home = await app.inject({ method: "GET", url: "/" });
+    expect(home.body).toContain("recurring automated");
+    expect(home.body).toContain("Message and data rates may apply");
+    expect(home.body).toContain('href="sms:+19704708839?body=JOIN"');
+    expect(home.body).toContain('href="./privacy/"');
+    expect(home.body).toContain('href="./terms/"');
+    const privacy = await app.inject({ method: "GET", url: "/privacy/" });
+    expect(privacy.body).toContain("do not share, sell, rent, or provide your mobile phone number");
+    expect(privacy.body).toContain("Effective August 23, 2026");
+    const terms = await app.inject({ method: "GET", url: "/terms/" });
+    expect(terms.body).toContain("Reply <strong>START</strong>");
+    expect(home.body + privacy.body + terms.body).not.toContain("DOCUMENT PENDING");
+    expect((await app.inject({ method: "GET", url: "/styles.css" })).statusCode).toBe(200);
   });
 
   it("rejects missing admin authentication and exposes only published event data publicly", async () => {

@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS sms_events (
   volunteer_id INTEGER REFERENCES volunteers(id),
   event_id INTEGER REFERENCES events(id),
   classification TEXT,
+  twilio_opt_out_type TEXT,
   delivery_status TEXT,
   created_at TEXT NOT NULL
 );

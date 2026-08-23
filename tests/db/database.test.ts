@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 import { openDatabase } from "../../src/db/connection.js";
 
@@ -20,7 +21,7 @@ describe("database", () => {
     let db = openDatabase(path);
     expect(
       db.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get(),
-    ).toEqual({ count: 1 });
+    ).toEqual({ count: 2 });
     db.close();
     db = openDatabase(path);
     const tables = db
@@ -37,6 +38,11 @@ describe("database", () => {
         "sms_events",
       ]),
     );
+    expect(
+      (db.prepare("PRAGMA table_info(sms_events)").all() as Array<{ name: string }>).map(
+        ({ name }) => name,
+      ),
+    ).toContain("twilio_opt_out_type");
     db.close();
   });
 
@@ -87,6 +93,38 @@ describe("database", () => {
     insert.run(event.lastInsertRowid, volunteer.lastInsertRowid, now, now);
     expect(() => insert.run(event.lastInsertRowid, volunteer.lastInsertRowid, now, now)).toThrow();
     db.close();
+  });
+
+  it("upgrades a version-one SMS ledger with OptOutType evidence", () => {
+    const directory = mkdtempSync(join(tmpdir(), "volunteer-board-v1-"));
+    temporaryDirectories.push(directory);
+    const path = join(directory, "board.sqlite");
+    const legacy = new Database(path);
+    legacy.exec(`
+      CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
+      INSERT INTO schema_migrations VALUES (1, '2026-08-23T00:00:00.000Z');
+      CREATE TABLE sms_events (
+        id INTEGER PRIMARY KEY,
+        twilio_message_sid TEXT UNIQUE,
+        direction TEXT NOT NULL,
+        volunteer_id INTEGER,
+        event_id INTEGER,
+        classification TEXT,
+        delivery_status TEXT,
+        created_at TEXT NOT NULL
+      );
+    `);
+    legacy.close();
+    const upgraded = openDatabase(path);
+    expect(
+      (upgraded.prepare("PRAGMA table_info(sms_events)").all() as Array<{ name: string }>).map(
+        ({ name }) => name,
+      ),
+    ).toContain("twilio_opt_out_type");
+    expect(
+      upgraded.prepare("SELECT MAX(version) AS version FROM schema_migrations").get(),
+    ).toEqual({ version: 2 });
+    upgraded.close();
   });
 
   it("has no attendance, check-in, or no-show state", () => {

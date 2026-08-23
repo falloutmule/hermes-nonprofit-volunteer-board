@@ -11,6 +11,7 @@ interface TwilioInboundBody {
   To?: string;
   Body?: string;
   MessageSid?: string;
+  OptOutType?: string;
   [key: string]: string | undefined;
 }
 
@@ -48,10 +49,15 @@ export async function registerTwilioInbound(
       return reply.code(400).send({ error: "From must be a valid phone number" });
     }
 
-    const result = dependencies.board.processInbound({ from: phone, body: Body, messageSid: MessageSid });
+    const result = dependencies.board.processInbound({
+      from: phone,
+      body: Body,
+      messageSid: MessageSid,
+      ...(request.body.OptOutType ? { optOutType: request.body.OptOutType } : {}),
+    });
     await deliverNotifications(dependencies.board, dependencies.smsSender, result.notifications);
     const response = new twilio.twiml.MessagingResponse();
-    if (result.reply) response.message(result.reply);
+    if (result.reply && !request.body.OptOutType) response.message(result.reply);
     return reply.type("text/xml; charset=utf-8").send(response.toString());
   });
 }

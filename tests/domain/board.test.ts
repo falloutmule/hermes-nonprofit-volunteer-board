@@ -38,6 +38,9 @@ describe("deterministic board transitions", () => {
     expect(duplicate).toMatchObject({ duplicate: true, reply: null });
     expect(scalar(db, "SELECT COUNT(*) AS value FROM volunteers")).toBe(1);
     expect(scalar(db, "SELECT COUNT(*) AS value FROM consent_events WHERE action = 'opt_in'")).toBe(1);
+    expect(
+      db.prepare("SELECT keyword, policy_version FROM consent_events").get(),
+    ).toEqual({ keyword: "JOIN", policy_version: "2026-08-23" });
     expect(scalar(db, "SELECT COUNT(*) AS value FROM sms_events")).toBe(1);
     expect(db.prepare("PRAGMA table_info(sms_events)").all()).not.toContainEqual(
       expect.objectContaining({ name: "body" }),
@@ -108,7 +111,7 @@ describe("deterministic board transitions", () => {
     expect(scalar(db, "SELECT COUNT(*) AS value FROM standby_openings")).toBe(0);
   });
 
-  it("records STOP and blocks later event signup until a new JOIN", () => {
+  it("records STOP, blocks event signup, and permits START re-enrollment", () => {
     addEvent();
     inbound(phones[0]!, "JOIN");
     inbound(phones[0]!, "STOP");
@@ -116,6 +119,21 @@ describe("deterministic board transitions", () => {
     expect(
       db.prepare("SELECT sms_status FROM volunteers WHERE phone_e164 = ?").get(phones[0]),
     ).toEqual({ sms_status: "opted_out" });
+    expect(inbound(phones[0]!, "START").classification).toBe("start");
+    expect(
+      db.prepare("SELECT sms_status FROM volunteers WHERE phone_e164 = ?").get(phones[0]),
+    ).toEqual({ sms_status: "opted_in" });
+    expect(
+      db.prepare("SELECT keyword, policy_version FROM consent_events ORDER BY id DESC LIMIT 1").get(),
+    ).toEqual({ keyword: "START", policy_version: "2026-08-23" });
+  });
+
+  it("does not treat START as first-time enrollment", () => {
+    expect(inbound(phones[0]!, "START").classification).toBe("start_not_opted_out");
+    expect(
+      db.prepare("SELECT sms_status FROM volunteers WHERE phone_e164 = ?").get(phones[0]),
+    ).toEqual({ sms_status: "pending" });
+    expect(scalar(db, "SELECT COUNT(*) AS value FROM consent_events")).toBe(0);
   });
 
   it("cancels an opted-out volunteer's pending offer and advances to the next standby", () => {

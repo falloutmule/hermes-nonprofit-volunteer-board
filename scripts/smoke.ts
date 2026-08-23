@@ -11,12 +11,20 @@ const config = loadConfig({
   ADMIN_API_TOKEN: "synthetic-admin-token",
 });
 const app = await buildApp({ config, smsSender: new FakeSmsSender() });
-const paths = ["/health", "/", "/calendar/", "/privacy/", "/terms/"];
+const paths = ["/health", "/", "/calendar/", "/privacy/", "/terms/", "/styles.css"];
 for (const path of paths) {
   const response = await app.inject({ method: "GET", url: path });
   if (response.statusCode !== 200) {
     throw new Error(`${path} returned ${response.statusCode}`);
   }
   process.stdout.write(`${path} ${response.statusCode}\n`);
+}
+const complianceBody = (
+  await Promise.all(
+    ["/", "/privacy/", "/terms/"].map(async (url) => (await app.inject({ method: "GET", url })).body),
+  )
+).join("\n");
+if (complianceBody.includes("DOCUMENT PENDING") || complianceBody.includes("{{PUBLIC_SITE_URL}}")) {
+  throw new Error("Public compliance pages still contain a placeholder");
 }
 await app.close();

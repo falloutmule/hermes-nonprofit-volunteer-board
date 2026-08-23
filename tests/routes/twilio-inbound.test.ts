@@ -46,7 +46,8 @@ describe("Twilio inbound route", () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.headers["content-type"]).toContain("text/xml");
-    expect(response.body).toContain("opted in");
+    expect(response.body).toContain("You're enrolled in volunteer SMS testing");
+    expect(response.body).toContain("Msg &amp; data rates may apply");
     expect(scalar(db, "SELECT COUNT(*) AS value FROM consent_events")).toBe(1);
   });
 
@@ -126,7 +127,57 @@ describe("Twilio inbound route", () => {
       Body: "hello there",
       MessageSid: "SMUNKNOWN",
     });
-    expect(help.body).toContain("Reply with an event keyword");
+    expect(help.body).toContain("Help at Falloutmule@gmail.com");
     expect(unknown.body).toContain("didn't understand");
+  });
+
+  it("records managed OptOutType transitions without duplicating Twilio replies", async () => {
+    const phone = "+13035550112";
+    await postInbound({
+      From: phone,
+      To: "+19704708839",
+      Body: "JOIN",
+      MessageSid: "SMMANAGEDJOIN",
+    });
+    for (const [OptOutType, Body, MessageSid] of [
+      ["HELP", "HELP", "SMMANAGEDHELP"],
+      ["STOP", "QUIT", "SMMANAGEDSTOP"],
+      ["START", "START", "SMMANAGEDSTART"],
+    ] as const) {
+      const response = await postInbound({
+        From: phone,
+        To: "+19704708839",
+        Body,
+        MessageSid,
+        OptOutType,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toBe("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response/>");
+    }
+    expect(
+      db.prepare("SELECT sms_status FROM volunteers WHERE phone_e164 = ?").get(phone),
+    ).toEqual({ sms_status: "opted_in" });
+    expect(
+      db
+        .prepare(
+          "SELECT twilio_opt_out_type, classification FROM sms_events WHERE twilio_opt_out_type IS NOT NULL ORDER BY id",
+        )
+        .all(),
+    ).toEqual([
+      { twilio_opt_out_type: "HELP", classification: "help" },
+      { twilio_opt_out_type: "STOP", classification: "stop" },
+      { twilio_opt_out_type: "START", classification: "start" },
+    ]);
+    expect(
+      db
+        .prepare(
+          "SELECT keyword, source, policy_version FROM consent_events WHERE keyword IN ('HELP', 'STOP', 'START') ORDER BY id",
+        )
+        .all(),
+    ).toEqual([
+      { keyword: "HELP", source: "twilio_opt_out_type", policy_version: "2026-08-23" },
+      { keyword: "STOP", source: "twilio_opt_out_type", policy_version: "2026-08-23" },
+      { keyword: "START", source: "twilio_opt_out_type", policy_version: "2026-08-23" },
+    ]);
   });
 });

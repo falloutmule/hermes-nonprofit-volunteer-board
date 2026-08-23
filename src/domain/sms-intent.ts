@@ -2,6 +2,7 @@ export type SmsIntent =
   | { kind: "join" }
   | { kind: "help" }
   | { kind: "stop" }
+  | { kind: "start" }
   | { kind: "drop"; eventKeyword?: string }
   | { kind: "yes" }
   | { kind: "no" }
@@ -17,6 +18,7 @@ export function parseSmsIntent(body: string): SmsIntent {
   if (normalized === "JOIN") return { kind: "join" };
   if (normalized === "HELP") return { kind: "help" };
   if (normalized === "STOP") return { kind: "stop" };
+  if (normalized === "START") return { kind: "start" };
   if (normalized === "YES") return { kind: "yes" };
   if (normalized === "NO") return { kind: "no" };
   if (normalized === "DROP") return { kind: "drop" };
