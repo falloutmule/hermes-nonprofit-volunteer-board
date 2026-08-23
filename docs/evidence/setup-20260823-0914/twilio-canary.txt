@@ -1,0 +1,18 @@
+SYNTHETIC CANARY — VERIFIED PASS
+
+Command: npm run canary
+Exit: 0
+
+{"ok":true,"signatureValidated":true,"inboundEvents":6,"confirmedSignups":1,"acceptedOffers":1,"capturedOutboundMessages":1,"rawBodiesPersisted":false}
+
+The canary used an in-memory SQLite database, a synthetic Auth Token, official Twilio signature generation/validation, Fastify injection, and FakeSmsSender. It exercised:
+JOIN → confirmed signup → standby signup → confirmed DROP → one standby offer → YES acceptance.
+
+REAL TWILIO STATUS — UNTESTED
+
+- No live credentials were supplied or inspected.
+- Twilio CLI was not installed.
+- cloudflared was not installed.
+- No Twilio Console webhook was changed.
+- No carrier message was sent.
+- A2P campaign and final compliance copy remain pending.

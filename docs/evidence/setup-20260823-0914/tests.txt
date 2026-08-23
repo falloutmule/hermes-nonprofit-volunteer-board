@@ -1,0 +1,16 @@
+COMMAND: npm test
+EXIT: 0
+
+> hermes-nonprofit-volunteer-board@0.1.0 test
+> vitest run
+
+PASS tests/db/database.test.ts (4 tests)
+PASS tests/domain/board.test.ts (7 tests)
+PASS tests/routes/public-admin.test.ts (3 tests)
+PASS tests/routes/twilio-inbound.test.ts (5 tests)
+
+Test Files: 4 passed (4)
+Tests: 19 passed (19)
+Duration: 645ms
+
+RESULT: VERIFIED PASS

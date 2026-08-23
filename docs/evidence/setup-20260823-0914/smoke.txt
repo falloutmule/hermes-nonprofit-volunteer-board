@@ -1,0 +1,22 @@
+COMMAND: npm run smoke
+EXIT: 0
+
+/health 200
+/ 200
+/calendar/ 200
+/privacy/ 200
+/terms/ 200
+
+PRODUCTION-BUILD SOCKET CHECK
+Command: node dist/src/server.js
+HealthOk: True
+PrivacyStatus: 200
+PlaceholderPresent: True
+Server process was stopped after verification.
+
+FRESH DATABASE MIGRATION
+Command: npm run migrate with DATABASE_PATH=.\data\verification.sqlite
+Exit: 0
+Result: {"ok":true,"migrations":[{"version":1}]}
+
+RESULT: VERIFIED PASS

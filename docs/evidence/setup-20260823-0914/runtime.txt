@@ -1,0 +1,11 @@
+VERIFIED 2026-08-23 09:14 America/Denver
+
+Project path: C:\Users\fallo\Documents\Codex\2026-08-23\files-mentioned-by-the-user-codex\outputs\hermes-nonprofit-volunteer-board
+Git: git version 2.54.0.windows.1
+Node: v24.14.0
+npm: 11.9.0
+SQLite CLI: 3.50.6
+Twilio CLI: NOT FOUND
+cloudflared: NOT FOUND
+
+Runtime conclusion: Node satisfies the Node 22+ contract. Live Twilio and tunnel tooling were not available and were not installed.

@@ -1,0 +1,20 @@
+VERIFIED BASELINE
+
+Initial working path:
+C:\Users\fallo\Documents\Codex\2026-08-23\files-mentioned-by-the-user-codex
+
+Initial state:
+- Not inside a Git worktree.
+- Workspace contained only outputs/ and work/.
+- No directory named hermes-nonprofit-volunteer-board or hermes-nonprofit-sms was found in the searched Codex and Downloads locations.
+
+Local project action:
+- Initialized a new repository on branch main.
+- No Git remote was created.
+- No push or publication was performed.
+
+Source/test commits at evidence capture:
+f2c9ad1 chore: scaffold Hermes Non-Profit volunteer board
+b264ac7 feat: add volunteer event and standby domain
+7534c49 feat: add Twilio public site and admin boundaries
+a68ba8f test: verify volunteer board setup end to end

@@ -1,0 +1,23 @@
+VERIFIED 2026-08-23
+
+Dependency audit
+- Command: npm audit --json
+- Exit: 0
+- Known vulnerabilities: 0 info, 0 low, 0 moderate, 0 high, 0 critical
+
+Repository checks
+- .env ignored: YES
+- .env tracked: NO
+- Case-sensitive Twilio credential-pattern matches in working tree: 0
+- Case-sensitive Twilio credential-pattern matches in Git history: 0
+- raw_body/message_body columns in schema: 0
+- Admin missing-auth test present and passing: YES
+- Invalid/missing Twilio-signature test present and passing: YES
+- Git remotes: NONE
+
+Remediated finding
+- The first installed @fastify/static 8.x tree produced a high-severity npm audit result for path traversal/route-guard advisories.
+- Direct dependency was upgraded to @fastify/static 10.1.3.
+- npm install then reported 0 vulnerabilities, and the final audit independently confirmed 0.
+
+No Auth Token, live account credential, raw SMS archive, real volunteer number, cookie, or external API payload is included in this evidence.
