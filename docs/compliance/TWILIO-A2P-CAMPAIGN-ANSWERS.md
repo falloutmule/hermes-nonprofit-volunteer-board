@@ -28,9 +28,9 @@ Purpose: Low-volume internal volunteer SMS testing
 Replace these placeholders only after deployment:
 
 ```text
-Business / opt-in page: {{PUBLIC_SITE_URL}}
-Privacy Policy: {{PRIVACY_POLICY_URL}}
-SMS Terms and Conditions: {{TERMS_URL}}
+Business / opt-in page: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/
+Privacy Policy: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
+SMS Terms and Conditions: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
 ```
 
 Expected GitHub Pages shape, if the approved repository name is used:
@@ -76,12 +76,12 @@ Hermes Non-Profit sends low-volume SMS messages to invited internal test partici
 Replace all three URL placeholders before submission:
 
 ```text
-End users opt in through the publicly accessible Hermes Non-Profit SMS Testing page at {{PUBLIC_SITE_URL}}. The page identifies Hermes Non-Profit and displays the complete SMS disclosure immediately with the Text JOIN call to action. It explains that participants will receive recurring automated volunteer-coordination messages, including test volunteer opportunities, event information, signup confirmations, questions, reminders, cancellation confirmations, and standby-opening offers. It states that message frequency varies, that most participants receive 1–8 messages per test event plus replies to messages they initiate, that message and data rates may apply, and that users may reply STOP to opt out or HELP for help.
+End users opt in through the publicly accessible Hermes Non-Profit SMS Testing page at https://falloutmule.github.io/hermes-nonprofit-volunteer-board/. The page identifies Hermes Non-Profit and displays the complete SMS disclosure immediately with the Text JOIN call to action. It explains that participants will receive recurring automated volunteer-coordination messages, including test volunteer opportunities, event information, signup confirmations, questions, reminders, cancellation confirmations, and standby-opening offers. It states that message frequency varies, that most participants receive 1–8 messages per test event plus replies to messages they initiate, that message and data rates may apply, and that users may reply STOP to opt out or HELP for help.
 
 After reviewing that disclosure, an invited test participant voluntarily texts JOIN to +1 (970) 470-8839. The system records the phone number, Twilio MessageSid, timestamp, JOIN keyword, and applicable policy version, then sends an enrollment confirmation. No checkbox is preselected. Numbers are not purchased, rented, scraped, imported from third-party lists, or enrolled through verbal consent. Keyword opt-in is the only consent method used for this campaign.
 
-Privacy Policy: {{PRIVACY_POLICY_URL}}
-SMS Terms and Conditions: {{TERMS_URL}}
+Privacy Policy: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
+SMS Terms and Conditions: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
 ```
 
 ## Opt-in keyword
