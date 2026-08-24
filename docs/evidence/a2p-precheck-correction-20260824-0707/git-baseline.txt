@@ -1,0 +1,11 @@
+Project: C:\Users\fallo\Documents\Codex\2026-08-23\files-mentioned-by-the-user-codex\outputs\hermes-nonprofit-volunteer-board
+Baseline branch: main
+Baseline HEAD: d339c16e03d05551be52ff19e76d22ab18857108
+Baseline remote main: d339c16e03d05551be52ff19e76d22ab18857108
+Baseline status: clean
+Remote: https://github.com/falloutmule/hermes-nonprofit-volunteer-board.git
+
+Working branch: feature/a2p-precheck-correction-001
+Public identity commit: c51331d
+Campaign worksheet commit: bf681da
+Integration method: fast-forward to main; no force push.

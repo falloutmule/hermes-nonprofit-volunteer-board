@@ -1,0 +1,9 @@
+Baseline worksheet at d339c16
+
+- Campaign use case recommendation: LOW_VOLUME / Low Volume Mixed.
+- Campaign description did not name Travis Omernick or Sole Proprietor.
+- Message flow did not explicitly say that the website collects no phone number or consent.
+- Five samples were populated.
+- BUaa974072c99218e603ff8db997a91560 was labeled as Brand SID.
+
+The baseline text conflicted with the selected Sole Proprietor campaign classification.

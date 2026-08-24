@@ -1,0 +1,11 @@
+Direct HTTPS verification after workflow 32730768948
+
+PASS  200  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/
+      Travis=true; sole proprietor=true; identity=true; no-web-consent=true;
+      form=false; Privacy link=true; Terms link=true
+
+PASS  200  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
+      Travis=true; sole proprietor=true; identity=true; form=false; Terms link=true
+
+PASS  200  https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
+      Travis=true; sole proprietor=true; identity=true; form=false; Privacy link=true

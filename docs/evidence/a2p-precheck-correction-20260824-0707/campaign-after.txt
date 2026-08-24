@@ -1,0 +1,16 @@
+Corrected worksheet: docs/compliance/TWILIO-A2P-CAMPAIGN-ANSWERS.md
+
+VERIFIED  Use case is SOLE_PROPRIETOR.
+VERIFIED  Mixed-messaging campaign terminology was removed.
+VERIFIED  Campaign description names Travis Omernick, Hermes Non-Profit, and Sole Proprietor.
+VERIFIED  Purpose is one internal development/testing project.
+VERIFIED  Message flow identifies SMS keyword opt-in as the only opt-in method.
+VERIFIED  Website is described accurately as collecting no phone number or consent.
+VERIFIED  Two required samples are test-oriented; samples 3–5 are to be blank when allowed.
+VERIFIED  JOIN/START/STOP/HELP/DROP/YES/NO semantics are preserved.
+VERIFIED  BN9c7318484ae042864ccd898c2ce38354 is labeled Brand registration SID.
+VERIFIED  BUaa974072c99218e603ff8db997a91560 is labeled Trust Hub A2P Bundle SID.
+
+Campaign status: NOT SUBMITTED
+Campaign SID: NOT ASSIGNED
+Pre-check result: UNTESTED AFTER CORRECTION

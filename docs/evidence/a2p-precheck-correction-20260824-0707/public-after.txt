@@ -1,0 +1,13 @@
+Corrected source and deployed content
+
+VERIFIED on home, Privacy Policy, and SMS Terms:
+Hermes Non-Profit is an internal volunteer-system testing project operated by sole
+proprietor Travis Omernick.
+
+VERIFIED on the home page:
+This website does not collect your phone number or SMS consent. You opt in only by
+sending JOIN from your own phone to +1 (970) 470-8839.
+
+VERIFIED  No web form was added.
+VERIFIED  JOIN, recurring automated messages, frequency, message/data rates, STOP, HELP,
+DROP, Privacy Policy, and SMS Terms remain present and aligned.

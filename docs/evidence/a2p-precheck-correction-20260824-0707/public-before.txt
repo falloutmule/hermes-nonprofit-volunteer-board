@@ -1,0 +1,8 @@
+Baseline public content at d339c16
+
+- Home page named Hermes Non-Profit but did not name Travis Omernick.
+- Privacy Policy did not name Travis Omernick.
+- SMS Terms did not name Travis Omernick.
+- Home page accurately described JOIN-based SMS consent and had no web form.
+- The explicit sentence that the website collects neither phone number nor SMS consent
+  was not yet present.

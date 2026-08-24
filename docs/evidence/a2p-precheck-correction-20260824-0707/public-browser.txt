@@ -1,0 +1,4 @@
+NOT RUN — USER BOUNDARY
+
+The user explicitly stopped all browser work. Public deployment was verified with direct
+HTTPS requests instead. No fresh browser screenshots were created.

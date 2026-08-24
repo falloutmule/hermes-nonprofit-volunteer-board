@@ -1,0 +1,27 @@
+Command: npm test
+Exit code: 0
+
+PASS  tests/db/database.test.ts — 5
+PASS  tests/domain/board.test.ts — 8
+PASS  tests/routes/public-admin.test.ts — 3
+PASS  tests/routes/twilio-inbound.test.ts — 6
+
+Test files: 4 passed
+Tests: 22 passed
+
+Command: npm run smoke
+Exit code: 0
+/health 200
+/ 200
+/calendar/ 200
+/privacy/ 200
+/terms/ 200
+/styles.css 200
+
+Command: npm run canary
+Exit code: 0
+Synthetic signed-webhook canary: PASS
+Signature validated: true
+Raw bodies persisted: false
+
+The canary is synthetic and is not a real Twilio or carrier test.
