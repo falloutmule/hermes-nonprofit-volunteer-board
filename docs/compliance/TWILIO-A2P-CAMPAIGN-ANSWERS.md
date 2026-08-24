@@ -1,234 +1,146 @@
-# Hermes Non-Profit — Twilio A2P Campaign Submission Answers
+# Hermes Non-Profit — Twilio A2P Campaign Manual-Entry Answers
 
-## Status
+## Status and submission boundary
 
-These answers are prepared for the **Hermes Non-Profit** internal volunteer SMS testing campaign.
+These answers are prepared for manual entry into the Hermes Non-Profit Sole Proprietor
+campaign form.
 
-Do not submit until:
+    Campaign status: NOT SUBMITTED
+    Campaign SID: NOT ASSIGNED
+    Pre-check result: UNTESTED AFTER CORRECTION
 
-1. the public opt-in page, Privacy Policy, and SMS Terms are deployed;
-2. all three URLs open without login in an incognito/private browser;
-3. the pages contain the final text in this package;
-4. the application records JOIN/STOP consent and honors opt-outs;
-5. placeholders below are replaced by the verified live URLs.
+This worksheet does not authorize Twilio Console changes or campaign submission. Review
+every field against the live form, run pre-check manually, and do not submit while a
+warning remains.
 
-## Verified identity
+## Registered identity
 
-```text
-Brand name: Hermes Non-Profit
-Brand SID: BUaa974072c99218e603ff8db997a91560
-Twilio number: +1 (970) 470-8839
-E.164 number: +19704708839
-Public contact email: Falloutmule@gmail.com
-Purpose: Low-volume internal volunteer SMS testing
-```
+    Brand name: Hermes Non-Profit
+    Brand type: SOLE_PROPRIETOR
+    Registration status: Registered
+    Brand registration SID: BN9c7318484ae042864ccd898c2ce38354
+    Trust Hub A2P Bundle SID: BUaa974072c99218e603ff8db997a91560
+    Sole proprietor: Travis Omernick
+    Twilio number: +1 (970) 470-8839
+    E.164 number: +19704708839
+    Public contact email: Falloutmule@gmail.com
+    Campaign purpose: Internal development and testing of a volunteer event coordination system
+
+Identity relationship:
+
+    Travis Omernick
+    → sole proprietor
+    → operates Hermes Non-Profit
+    → Hermes Non-Profit is an internal volunteer-system testing project
+
+Do not substitute another organization, sender, proprietor, Brand, or use-case category.
 
 ## Public URLs
 
-Replace these placeholders only after deployment:
-
-```text
-Business / opt-in page: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/
-Privacy Policy: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
-SMS Terms and Conditions: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
-```
-
-Expected GitHub Pages shape, if the approved repository name is used:
-
-```text
-https://falloutmule.github.io/hermes-nonprofit-volunteer-board/
-https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
-https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
-```
-
-Do not paste the expected URLs into Twilio until they are live and directly verified.
-
----
+    Business / opt-in page: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/
+    Privacy Policy: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
+    SMS Terms and Conditions: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
 
 ## Campaign name
 
-```text
-Hermes Non-Profit Volunteer SMS Testing
-```
+Use this value if the form exposes an editable campaign name:
+
+    Travis Omernick - Hermes Non-Profit SMS Testing
 
 ## Campaign use case
 
-**Do not guess from this document. Inspect the exact options presented for the approved Brand.**
+    SOLE_PROPRIETOR
 
-Preferred selection if available:
-
-```text
-LOW_VOLUME / Low Volume Mixed
-```
-
-This matches a very low-volume campaign containing conversational replies, event confirmations, reminders, cancellations, and standby offers.
-
-If LOW_VOLUME is not available, stop and inspect the available use cases before selecting another one. Do not select `CHARITY` unless **Hermes Non-Profit itself**, not another organization, has been verified by Twilio as an eligible 501(c)(3) nonprofit.
+Do not select or describe this campaign as Charity or any mixed-messaging campaign type.
 
 ## Campaign description
 
-```text
-Hermes Non-Profit sends low-volume SMS messages to invited internal test participants who voluntarily opt in to test a volunteer event coordination system. Messages may include test volunteer opportunities, event details, signup confirmations, follow-up questions, reminders, cancellation confirmations, and standby-opening offers. Recipients are individuals who review the public SMS disclosure and text JOIN to the Hermes Non-Profit number. Messages are not used for purchased lists, lead generation, or unsolicited marketing.
-```
+    Travis Omernick operates Hermes Non-Profit, an internal development project used to test a volunteer event coordination system. This Sole Proprietor campaign sends SMS only to invited test participants who voluntarily opt in by texting JOIN. Messages test signup confirmations, event questions, reminders, cancellation confirmations, YES/NO responses, and standby-opening workflows. The campaign is for software development and testing only and does not use purchased lists, lead generation, advertising, fundraising, or unsolicited marketing.
 
-## How do end users consent to receive messages? / Message flow
+## Message flow / how end users consent
 
-Replace all three URL placeholders before submission:
+    The only opt-in method for this campaign is SMS keyword opt-in. Invited test participants review the public Hermes Non-Profit SMS disclosure at https://falloutmule.github.io/hermes-nonprofit-volunteer-board/ and voluntarily text JOIN from their own mobile phone to +1 (970) 470-8839. Sending JOIN is the affirmative action that gives Hermes Non-Profit, operated by sole proprietor Travis Omernick, permission to send recurring volunteer-system testing messages to that originating phone number.
 
-```text
-End users opt in through the publicly accessible Hermes Non-Profit SMS Testing page at https://falloutmule.github.io/hermes-nonprofit-volunteer-board/. The page identifies Hermes Non-Profit and displays the complete SMS disclosure immediately with the Text JOIN call to action. It explains that participants will receive recurring automated volunteer-coordination messages, including test volunteer opportunities, event information, signup confirmations, questions, reminders, cancellation confirmations, and standby-opening offers. It states that message frequency varies, that most participants receive 1–8 messages per test event plus replies to messages they initiate, that message and data rates may apply, and that users may reply STOP to opt out or HELP for help.
+    The website does not collect phone numbers and there is no web signup form or consent checkbox. The page displays the message types, frequency disclosure, notice that message and data rates may apply, STOP and HELP instructions, Privacy Policy, and SMS Terms.
 
-After reviewing that disclosure, an invited test participant voluntarily texts JOIN to +1 (970) 470-8839. The system records the phone number, Twilio MessageSid, timestamp, JOIN keyword, and applicable policy version, then sends an enrollment confirmation. No checkbox is preselected. Numbers are not purchased, rented, scraped, imported from third-party lists, or enrolled through verbal consent. Keyword opt-in is the only consent method used for this campaign.
+    After JOIN is received, the system records consent and sends an enrollment confirmation. Phone numbers are not purchased, rented, scraped, imported from third-party lists, entered by staff, or enrolled through verbal consent.
 
-Privacy Policy: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
-SMS Terms and Conditions: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
-```
+    Privacy Policy: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/privacy/
+    Terms: https://falloutmule.github.io/hermes-nonprofit-volunteer-board/terms/
 
-## Opt-in keyword
+## Opt-in type and keywords
 
-```text
-JOIN
-```
+    Opt-in type: via_text
+    Opt-in keywords: JOIN, START
+
+Keyword semantics:
+
+- **JOIN** is first-time enrollment.
+- **START** is re-enrollment after **STOP**.
+- **YES** is not an opt-in keyword; it is an event/standby response in context.
+- **DROP** cancels one event and is not a global opt-out.
+- **STOP** is the advertised global opt-out.
+- **HELP** requests assistance.
 
 ## Opt-in confirmation message
 
-```text
-Hermes Non-Profit: You're enrolled in volunteer SMS testing. Msg frequency varies, typically 1-8 msgs/test event. Msg & data rates may apply. Reply HELP for help or STOP to opt out.
-```
+    Hermes Non-Profit: You're enrolled in recurring volunteer SMS testing. Msg frequency varies, typically 1-8 msgs/test event. Msg & data rates may apply. Reply HELP for help or STOP to opt out.
 
-## Opt-out keyword advertised to participants
+## Opt-out and help
 
-```text
-STOP
-```
+    Advertised opt-out keyword: STOP
+    Re-enrollment keyword: START
+    Help keyword: HELP
+    Event-specific cancellation command: DROP
 
-Twilio may also recognize standard long-code opt-out synonyms. Do not advertise `CANCEL` for event cancellation because Twilio may interpret it as a global opt-out.
+Opt-out confirmation:
 
-## Opt-out confirmation message
+    Hermes Non-Profit: You are unsubscribed and will receive no more messages. Reply START to re-enroll.
 
-```text
-Hermes Non-Profit: You are unsubscribed and will receive no more messages. Reply START to re-enroll.
-```
+Help message:
 
-## Help keyword
-
-```text
-HELP
-```
-
-## Help message
-
-```text
-Hermes Non-Profit SMS Testing: Help at Falloutmule@gmail.com. Msg & data rates may apply. Reply STOP to opt out.
-```
-
-## Re-enrollment keyword
-
-```text
-START
-```
-
-## Event-specific cancellation command
-
-```text
-DROP
-```
-
-`DROP` is an application command and must not be configured as a global opt-out keyword.
-
----
+    Hermes Non-Profit SMS Testing: Help at Falloutmule@gmail.com. Msg & data rates may apply. Reply STOP to opt out.
 
 ## Representative message samples
 
-### Sample 1 — signup confirmation
+Use two samples and leave optional samples 3–5 blank when the form permits.
 
-```text
-Hermes Non-Profit: You're signed up for [TEST EVENT] on [DATE] at [TIME]. Reply DROP to cancel this event. Reply STOP to opt out of all texts.
-```
+### Sample 1
 
-### Sample 2 — follow-up question
+    Hermes Non-Profit Test: A signup was recorded for [TEST EVENT] on [DATE] at [TIME]. Reply DROP to test event cancellation or STOP to opt out.
 
-```text
-Hermes Non-Profit: For [TEST EVENT], can you help with [ROLE OR TASK]? Reply YES or NO. Reply STOP to opt out.
-```
+### Sample 2
 
-### Sample 3 — reminder
+    Hermes Non-Profit Test: A standby opening is available for [TEST EVENT]. Reply YES to test acceptance or NO to decline. Reply STOP to opt out.
 
-```text
-Hermes Non-Profit reminder: [TEST EVENT] begins [DATE] at [TIME] at [LOCATION]. Reply DROP if you need to cancel. Reply STOP to opt out.
-```
+If the form requires or preserves a third sample, use:
 
-### Sample 4 — standby opening
+    Hermes Non-Profit Test: Reminder for simulated event [TEST EVENT] on [DATE] at [TIME], [LOCATION]. Reply DROP to test cancellation or STOP to opt out.
 
-```text
-Hermes Non-Profit: A spot opened for [TEST EVENT] on [DATE]. Reply YES by [TIME] to accept or NO to pass. Reply STOP to opt out.
-```
+## Message-content declarations
 
-### Sample 5 — cancellation confirmation
+These declarations describe actual SMS bodies, not the public website:
 
-```text
-Hermes Non-Profit: Your signup for [TEST EVENT] has been cancelled. You remain enrolled in SMS testing. Reply STOP to opt out of all texts.
-```
+    Contains embedded links: No
+    Contains phone numbers: No
+    Direct lending: No
+    Age-gated content: No
+    Purchased lists: No
+    Lead generation: No
+    Unsolicited marketing: No
+    Number of sending phone numbers: 1
 
----
+If actual SMS bodies later include a URL or phone number, update the declarations and
+samples truthfully before sending that traffic.
 
-## Embedded content declarations
+## Manual pre-check gate
 
-For the current campaign:
+Before any submission:
 
-```text
-Has embedded links in SMS messages: No
-Has embedded phone numbers in SMS messages: No
-```
-
-The public policies contain links, but the representative SMS messages do not.
-
-If production messages later contain URLs or phone numbers in the message body, update the campaign declaration and samples before sending that traffic.
-
-## Number of sending phone numbers
-
-```text
-1
-```
-
-Current sender:
-
-```text
-+1 (970) 470-8839
-```
-
-## Opt-in evidence reviewers should be able to verify
-
-The public page must visibly show, before the participant acts:
-
-- Hermes Non-Profit as the sender;
-- the number +1 (970) 470-8839;
-- JOIN as the affirmative action;
-- the message categories;
-- recurring automated texts;
-- message frequency;
-- “Message and data rates may apply”;
-- STOP instructions;
-- HELP instructions;
-- direct Privacy Policy link;
-- direct SMS Terms link.
-
-## Final submission gate
-
-Do not submit until every item is true:
-
-- [ ] Public site URL opens without login.
-- [ ] Privacy URL opens directly without login or download.
-- [ ] Terms URL opens directly without login or download.
-- [ ] All three pages are on the same public domain.
-- [ ] Brand name is exactly “Hermes Non-Profit.”
-- [ ] The site explains the internal testing use case.
-- [ ] The phone number is exactly +1 (970) 470-8839.
-- [ ] The email is exactly Falloutmule@gmail.com.
-- [ ] The Privacy Policy contains the mobile-number and consent non-sharing clause.
-- [ ] Frequency and message/data-rate disclosures appear at the point of opt-in.
-- [ ] JOIN produces the stated confirmation.
-- [ ] STOP prevents further application messages.
-- [ ] HELP returns the stated help response.
-- [ ] The system does not send an extra reply when Twilio has already handled an OptOutType event.
-- [ ] A2P answers and actual behavior match.
+- confirm the live form still identifies the registered Hermes Non-Profit Sole Proprietor Brand;
+- confirm the public pages visibly connect Travis Omernick to Hermes Non-Profit;
+- confirm the opt-in type remains **via_text**;
+- confirm samples 3–5 are blank unless the form requires a third;
+- run Twilio pre-check and record the exact result and any field-level warning;
+- stop if pre-check still warns and do not keep rewriting copy randomly;
+- do not submit without separate explicit authorization.
