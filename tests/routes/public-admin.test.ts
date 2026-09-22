@@ -32,7 +32,7 @@ describe("public and admin routes", () => {
     const operatorStatement =
       "Hermes Non-Profit is an internal volunteer-system testing project";
     expect(home.body).toContain(operatorStatement);
-    expect(home.body).toContain("operated by\n      sole proprietor Travis Omernick");
+    expect(home.body.replace(/\r\n/g, "\n")).toContain("operated by\n      sole proprietor Travis Omernick");
     expect(home.body).toContain("This website does not collect your phone number or SMS consent");
     expect(home.body).not.toContain("<form");
     expect(home.body).toContain("recurring automated");
