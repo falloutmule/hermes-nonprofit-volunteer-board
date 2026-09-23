@@ -36,7 +36,7 @@ $targetExe=Join-Path $bin 'cloudflared.exe'
 if(Test-Path -LiteralPath $targetExe){if((Get-FileHash -LiteralPath $targetExe -Algorithm SHA256).Hash -ne $CloudflaredSHA256){throw 'Existing machine cloudflared differs; update it explicitly'}}
 else{Copy-Item -LiteralPath $CloudflaredSource -Destination $targetExe}
 if(-not(Test-Path -LiteralPath $app)) {
- git -c safe.directory=$SourceApp clone --no-hardlinks --no-checkout $SourceApp $app; Check
+ git -c safe.directory=$SourceApp -c safe.directory="$SourceApp/.git" clone --no-hardlinks --no-checkout $SourceApp $app; Check
  git -c safe.directory=$app -C $app checkout --detach $Revision; Check
 } else {
  $current=git -c safe.directory=$app -C $app rev-parse HEAD; Check
