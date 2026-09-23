@@ -1,73 +1,121 @@
-# Home hosting and recovery
+# Hermes Non-Profit home operations
 
-Current connector: Tailscale Funnel. See [the Funnel operations guide](tailscale-funnel.md) for the active URL, preserved private routes, Twilio handoff, and laptop hostname limitations. The Cloudflare instructions below are an inactive alternative.
+Authoritative inventory: [HOME DEPLOYMENT](HERMES-NONPROFIT-HOME-DEPLOYMENT.md). Laptop procedure: [migration](laptop-migration.md).
 
-## Layout and configuration
+Twilio → https://falloutshelter.tail2ec319.ts.net:10000 → Tailscale Funnel → 127.0.0.1:8787 → Fastify → SQLite. GitHub Pages hosts the public site and policies. The current Windows PC is the authoritative writer. This is the production home service.
 
-Windows code: `C:\Services\HermesVolunteerBoard\app` (detached, tested commit).
-Windows runtime root: `C:\ProgramData\HermesVolunteerBoard`, with `config`, `data`, `backups`, `logs`.
-Machine cloudflared: `C:\Program Files\HermesVolunteerBoard\bin\cloudflared.exe`.
-Node must also be installed machine-wide. Do not run production from a user profile.
+## Operator commands
 
-`CONFIG_FILE` selects `config\board.env`; it is required in startup tasks. Local development can still use `.env`. Explicit configuration passed to tests loads no files. Process variables override file values. Configuration errors show field names, never values.
-
-Production requires NODE_ENV=production, an absolute DATABASE_PATH, HTTPS PUBLIC_BASE_URL, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and a random ADMIN_API_TOKEN of at least 32 characters. Preserve the existing sender number and Messaging Service SID. LOG_PATH, BACKUP_PATH, PID_FILE and STOP_FILE are absolute runtime locations in the deployed environment. Do not put secrets in shell arguments, Git, logs or evidence. Protect backups as private volunteer data.
-
-Paths are OS-specific values of the same configuration keys. For Linux, use `/etc/hermes-volunteer-board/board.env`, `/var/lib/hermes-volunteer-board/volunteer-board.sqlite`, `/var/backups/hermes-volunteer-board`, `/var/log/hermes-volunteer-board`, and `/run/hermes-volunteer-board` for PID/stop files. Choose the laptop OS only after hardware/OS inspection. PUBLIC_BASE_URL stays the same across hosts once a stable hostname exists.
-
-## Installation and commands
-
-Run these commands in elevated PowerShell. `install.ps1` accepts a source checkout, its ignored environment file, a full tested commit, and an official cloudflared binary plus its verified SHA256. It creates restricted directories, clones without hardlinks, builds dependencies, provisions configuration only when absent, and installs tasks. It does not migrate data or start the app automatically. Existing differing installations are rejected rather than overwritten.
+Use elevated PowerShell. These commands never require printing credentials:
 
 ```powershell
-& '<source-checkout>\scripts\windows\install.ps1' -SourceApp '<source-checkout>' -SourceEnv '<source-checkout>\.env' -Revision '<full-tested-commit>' -CloudflaredSource '<official-binary>' -CloudflaredSHA256 '<official-digest>'
-$manage = 'C:\Services\HermesVolunteerBoard\app\scripts\windows\manage.ps1'
-& $manage -Action start
+$app='C:\Services\HermesVolunteerBoard\app'
+$root='C:\ProgramData\HermesVolunteerBoard'
+$manage="$app\scripts\windows\manage.ps1"
+$ts='C:\Program Files\Tailscale\tailscale.exe'
+$env:CONFIG_FILE="$root\config\board.env"
+Set-Location $app
 & $manage -Action status
-& $manage -Action backup
+& $manage -Action start
+# Planned shutdown (disables automatic app restart):
 & $manage -Action stop
-& $manage -Action restore -BackupFile '<verified-snapshot.sqlite>'
-& $manage -Action update -Revision '<full-tested-commit-already-present-in-checkout>'
+# Restart: stop, then start; do not run during an unattended verification.
+& $manage -Action start
+& $ts status
+& $ts serve status
+& $ts funnel status
+Get-Service Tailscale
+Get-ScheduledTask -TaskName 'HermesVolunteerBoard-*' | Select TaskName,State
+Get-ScheduledTask -TaskName 'HermesVolunteerBoard-*' | Get-ScheduledTaskInfo
 ```
 
-Tasks are `HermesVolunteerBoard-App`, `-Tunnel`, `-Backup`, `-Health`, running as LOCAL SERVICE, independent of interactive login. App/tunnel use startup triggers plus one-minute recovery activation with IgnoreNew, so an already-running instance is not duplicated. Backup runs every six hours and at boot; health every five minutes and at boot. Single-instance tasks retry failures after one minute, with no execution time limit. Reinstall preserves task enabled/disabled state. Unrelated Hermes tasks are not modified.
+Tailscale service is Automatic under LocalSystem. Run Unattended is enabled and device key expiry is disabled. Funnel persists with `--bg`; no separate connector task is needed. Only port 10000 is public. Preserve private Serve ports 443, 8443, 8444 and 8445. Never use global Serve/Funnel reset. If port 10000 alone lost its configuration, after diagnosis restore it with:
 
-Stop disables app automatic restart, requests shutdown through the protected stop file, and waits for the PID file to disappear. Do not force a restore if stop fails. START re-enrollment and its duplicate-reply repair are unchanged.
+```powershell
+& $ts funnel --bg --https=10000 http://127.0.0.1:8787
+# Disable only this application's public ingress during migration:
+& $ts funnel --https=10000 off
+```
 
-Updates require a previously tested commit made available locally with `git fetch` (the deployment clone initially points to the source checkout). They back up first, stop, check out the pinned revision, install/build/audit, then start. On a failure the app stays stopped for diagnosis. Save the old commit and pre-update backup. Never automatically downgrade a database after a migration; restore the matching backup with the app stopped. Reapply any intentional dependency privilege changes separately; no automatic npm or cloudflared update is installed.
+[Funnel CLI](https://tailscale.com/docs/reference/tailscale-cli/funnel) and [Windows unattended](https://tailscale.com/docs/how-to/run-unattended) describe these connector controls. Do not alter other routes, authentication, DNS or exit-node settings.
 
-## Database cutover, backups, and rollback
+## Health
 
-Before initial cutover, identify and stop any old app listener on 8787. Leave an existing Quick Tunnel running. Resolve the database path from the old environment; do not reuse synthetic databases.
+```powershell
+Invoke-WebRequest http://127.0.0.1:8787/health
+Invoke-WebRequest http://127.0.0.1:8787/ready
+Invoke-WebRequest https://falloutshelter.tail2ec319.ts.net:10000/health
+Invoke-WebRequest https://falloutshelter.tail2ec319.ts.net:10000/ready
+node scripts/host.mjs health
+```
 
-From the production checkout, `node scripts/host.mjs snapshot <old-live-db> <new-backup-file>` uses SQLite online backup, verifies integrity/schema/foreign keys, and atomically promotes the output. Restore that snapshot to the production data path with the app stopped. Compare all domain table counts and records internally without printing phone numbers. Keep the original checkout/database untouched for rollback and mark it inactive; never start both hosts.
+Health is liveness; readiness checks database access, schema migrations 1 and 2, expected domain tables and SMS metadata. Failures are generic 503 without private details. A request from a tailnet host can resolve privately: use an external network or the documented public-relay evidence to establish public internet reachability. Never infer Twilio delivery merely from HTTP checks.
 
-Backups are verified online snapshots: seven days of six-hour snapshots plus 30 daily snapshots. Incomplete `.partial` files are not successful backups. Only matching dated backup files are pruned after a new successful backup. Every restore stages/verifies a snapshot first and retains the prior database and WAL/SHM sidecars under `.before-restore-*`. Preserve and periodically review those rollback files manually. A corrupt input must leave the destination untouched.
+## Configuration and installation
 
-Test restores to a disposable protected location; compare schema, consent status and MessageSid uniqueness. Never insert fixtures in production. Local-only backups do not survive loss of this disk/PC. Securely copy configuration separately when migrating; database backup does not contain `.env` or tunnel credentials.
+`CONFIG_FILE` explicitly selects the protected `config\board.env`. Process variables override file values. The sanitized template is [migration/board.env.example](migration/board.env.example). Required production secrets are TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and ADMIN_API_TOKEN; never place values in commands, docs or evidence. Preserve sender and Messaging Service settings. NODE_ENV=production requires absolute DATABASE_PATH, an HTTPS PUBLIC_BASE_URL and valid credentials. LOG_PATH, BACKUP_PATH, PID_FILE and STOP_FILE are OS-specific absolute paths. Bind remains 127.0.0.1:8787.
 
-## Health, logs, and boot acceptance
+For a fresh Windows destination with machine-wide supported Node installed, run the tested checkout's installer with a securely transferred config file and full tested commit:
 
-`/health` is process liveness. `/ready` verifies schema versions 1 and 2, expected tables and SMS metadata availability; generic HTTP 503 means not ready. Both return no private data. Fastify listens only on 127.0.0.1:8787. Production refuses to start with a missing database instead of silently creating an empty one.
+```powershell
+& '<checkout>\scripts\windows\install.ps1' -SourceApp '<checkout>' -SourceEnv '<protected-config-file>' -Revision '<40-character-tested-commit>'
+```
 
-Operational logs are `host-YYYY-MM-DD.log`, rotated by UTC day with 14-day cleanup. App records request method/status only, no bodies, query strings, headers, phone numbers or raw errors. Health failures and backup outcomes are logged. Task exit status also records failures. Tunnel wrapper discards raw connector output and records only lifecycle events; verify public readiness to establish tunnel connectivity.
+It does not overwrite existing config, migrate the database or start the app. Existing differing revisions are rejected. App code/config are readable by LOCAL SERVICE; runtime data/backups/logs are writable by that identity; Administrators/SYSTEM/operator retain control. Do not loosen ACLs or use the source developer database.
 
-Keep AC sleep/hibernate disabled, keep the screen lock enabled, and ensure the network is available at boot. Never disable security updates. Do not reboot automatically.
+## Update and application rollback
 
-Boot acceptance requires the user to reboot and leave the PC at the sign-in screen. Check /ready from a separately available path (stable tunnel when provisioned), then after login inspect Task Scheduler start times and the host log timestamp for `started`/`ready_ok` before interactive login. Confirm backup task execution. Install/inspection or recovery of a killed process is NOT proof of reboot persistence. Record `LOCAL_BOOT_PENDING` until observed. Stable tunnel boot acceptance is separate and remains pending until a domain and connector exist.
+Record current `git rev-parse HEAD`, backup path and schema first. Test the target commit in the development checkout. Production origin currently points to that local checkout; fetch using an explicit safe.directory exception only when Git reports the known ownership difference. Never configure a global wildcard exception.
 
-## Cloudflare alternative: disabled, not the active connector
+```powershell
+git fetch origin
+& $manage -Action backup
+& $manage -Action update -Revision '<full-tested-commit-present-locally>'
+```
 
-No domain purchase, DNS change, named tunnel, or Twilio change occurs during local setup. The named-tunnel task is installed disabled. `config\tunnel.json` holds nonsecret executable/token-file paths and `enabled:false`; token contents belong only in the protected token file. Do not create a dummy token.
+Update backs up, stops, checks out detached, installs fresh dependencies, builds, audits production dependencies, then starts. Any failure stops the operation; diagnose before intervention. For code-only rollback, use update with the saved previous full commit. If schema/data compatibility changed, stop the app, restore the matching verified database backup, install the compatible revision and then start. Do not use an older backup after newer volunteer writes without reconciling authoritative state. Never run two writers.
 
-When the user supplies a Cloudflare-managed hostname, create remotely managed tunnel `hermes-volunteer-board`, route the hostname to http://127.0.0.1:8787, securely provision the token locally, set PUBLIC_BASE_URL to the exact stable HTTPS origin, set tunnel.json enabled=true, and run `manage.ps1 -Action enable-tunnel`. The wrapper passes `--token-file`, never the token value. Do not apply browser-login challenges to the Twilio webhook.
+## Database and backup/restore
 
-Verify public /ready and signature validation/idempotency with a disposable app/database, not the live volunteer records. The user manually changes the active Twilio incoming webhook to POST `<stable-origin>/webhooks/twilio/inbound`. Leave campaign, sender, opt-out configuration and GitHub Pages policies unchanged. Retire any Quick Tunnel after successful cutover. If a Quick Tunnel has already exited, its previous URL cannot be promised or silently replaced. Complete stable public reachability after a no-login reboot before claiming complete boot persistence. No real SMS is sent by these tools.
+Live DB: `C:\ProgramData\HermesVolunteerBoard\data\volunteer-board.sqlite`. Backups: `C:\ProgramData\HermesVolunteerBoard\backups`.
 
-## Laptop move
+```powershell
+node scripts/host.mjs inspect
+& $manage -Action backup
+# Verify a selected backup with the same integrity/schema/FK checks:
+node --input-type=module -e "import {inspectDatabase} from './dist/src/operations.js'; console.log(inspectDatabase(process.argv[1]));" '<backup.sqlite>'
+# Restore requires a controlled outage; wrapper stops/disables app first:
+& $manage -Action restore -BackupFile '<verified-backup.sqlite>'
+```
 
-Inspect the laptop first; do not choose its OS in advance. On Windows repeat machine-level installation; on Linux create a dedicated nonlogin user and systemd app/tunnel units with `WorkingDirectory`, `Environment=CONFIG_FILE=...`, `Restart=on-failure`, protected paths, and network-online ordering. Use systemd timers for the same six-hour backup and five-minute health commands. Reuse `scripts/host.mjs` and `scripts/tunnel.mjs`, supplying Linux paths and installing the appropriate official cloudflared binary. Install Node dependencies fresh, never copy node_modules across OSes.
+Inspection prints aggregate table counts only. Schema versions are 1,2; domain tables: volunteers, consent_events, events, signups, standby_openings, standby_offers, sms_events. Online SQLite backup writes a staged `.partial`, validates integrity_check, foreign_key_check and schema, then promotes it. Successful six-hour snapshots retain seven days; daily snapshots retain 30 days (age-based pruning). Protect all backups as private data. Local backups do not protect against loss of the PC or disk.
 
-Stop PC app and connector; take the final verified snapshot. Restore the laptop, transfer configuration securely, preserve the exact tested commit, then enable only the laptop connector. With Funnel, follow the hostname migration rules in tailscale-funnel.md; only a Cloudflare named tunnel can reuse the named-tunnel instructions here. Never load-balance independent SQLite copies. Verify integrity, local/public readiness and signed webhook rejection/acceptance. No registration, policy or full phone canary repeat. Any real SMS sanity check needs separate authorization.
+A restore first validates/stages the input; prior DB and WAL/SHM files are preserved as `.before-restore-*`. If restore fails, keep the app stopped. Prefer restoring the verified pre-restore backup. If using the preserved original, treat its matching WAL/SHM as one set, make a verified snapshot from that set before restoration, and never mix sidecars from different versions. Test restore in a separate protected directory; never put fixtures into live data. Do not delete rollback files automatically.
 
-Rollback before new writes: stop laptop and restart original PC. After new writes: stop laptop, snapshot its authoritative database, restore that on the PC, then restart PC. Never discard newer consent/opt-out events by restoring a stale copy.
+## Logs, maintenance and Windows startup
+
+Logs: `C:\ProgramData\HermesVolunteerBoard\logs\host-YYYY-MM-DD.log`; UTC daily files, 14-day pruning on health checks. Inspect only operational event/status fields; never print environment files or raw request data. Logs exclude SMS bodies, query strings, authorization headers, credentials and phone numbers.
+
+```powershell
+Get-ChildItem "$root\logs\host-*.log" | Select Name,LastWriteTime,Length
+Get-Content "$root\logs\host-$(Get-Date -AsUTC -Format yyyy-MM-dd).log" -Tail 20 |
+  ConvertFrom-Json | Select time,event,status,operation
+```
+
+App, Backup and Health tasks are `HermesVolunteerBoard-App`, `HermesVolunteerBoard-Backup`, `HermesVolunteerBoard-Health`, all LOCAL SERVICE without interactive login. App has startup plus one-minute recovery activation; IgnoreNew prevents overlapping task launches. Backup runs at boot/every six hours; health at boot/every five minutes. Unlimited task duration and one-minute failure retry. An already-running activation can yield a scheduler status without indicating app failure; check PID/listener/readiness and logs together. Reinstall tasks with `manage.ps1 -Action install` only when repairing definitions, not routinely.
+
+## Failure recovery
+
+| Symptom | Identify before intervention | Recovery |
+|---|---|---|
+| App down | task state, last result, port 8787 owner, sanitized host events | start through manage.ps1; never launch a second manual server |
+| /ready fails | schema/integrity via host inspect, ACLs, disk space | keep public writes unavailable; correct diagnosed access issue or restore verified authoritative backup |
+| DB does not open | path presence, permissions, disk and integrity | do not migrate/create an empty replacement; stop app and recover verified backup |
+| Backup fails | task result, operation_failed, disk space, backup directory ACL | fix cause, rerun backup, validate before pruning anything manually |
+| Tailscale offline | service state and tailscale status | diagnose connectivity; start service only if stopped; do not reauthenticate/reset settings blindly |
+| Funnel unavailable | local ready then serve/funnel status; public DNS/TLS | repair only port 10000 after diagnosis; preserve unrelated routes |
+| Webhook unreachable | public ready, exact origin including :10000, PUBLIC_BASE_URL, signature rejection | preserve signature validation; inspect sanitized statuses; user handles any Twilio field correction |
+
+## Acceptance and laptop
+
+Keep plugged-in sleep/hibernate disabled and screen locking enabled; never reboot automatically. BOOT_PERSISTENCE_VERIFICATION_PENDING. With explicit user authorization only, reboot, leave sign-in screen two minutes, verify from an independent path if available, then inspect pre-login start/log timestamps, single instance, ready, Funnel, backup and health tasks. Installation/crash recovery is not reboot evidence. New-Funnel real Twilio delivery remains untested; no SMS is required for this closeout. Follow [laptop migration](laptop-migration.md) later; laptop OS remains undecided.

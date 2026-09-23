@@ -53,7 +53,7 @@ Twilio sends form-encoded inbound SMS requests to:
 
 Set `PUBLIC_BASE_URL` to the exact externally visible HTTPS origin before configuring Twilio. Signature verification uses the official SDK, the request parameters, and this exact URL. Do not disable verification for local development; tests inject a synthetic token and valid synthetic signatures. When Twilio supplies `OptOutType`, the application records it and applies the state transition but returns empty TwiML so Twilio's managed HELP/STOP/START response is not duplicated.
 
-A future local live test may use a Cloudflare Quick Tunnel, but `cloudflared` is not a dependency and no tunnel or Twilio Console change is part of this setup. A Messaging Service SID is preferred when available; otherwise the verified number is supported by the adapter where Twilio registration permits it.
+The production home service uses Tailscale Funnel; see [home operations](docs/home-hosting.md) and [deployment inventory](docs/HERMES-NONPROFIT-HOME-DEPLOYMENT.md). Local development requires no public connector or Twilio Console change. A Messaging Service SID is preferred when available; otherwise the verified number is supported by the adapter where Twilio registration permits it.
 
 ## Admin boundary for Hermes
 

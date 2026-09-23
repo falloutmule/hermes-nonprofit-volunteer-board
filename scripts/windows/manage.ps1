@@ -1,5 +1,5 @@
 param(
- [Parameter(Mandatory)][ValidateSet('install','start','stop','status','backup','restore','update','enable-tunnel')][string]$Action,
+ [Parameter(Mandatory)][ValidateSet('install','start','stop','status','backup','restore','update')][string]$Action,
  [string]$AppRoot='C:\Services\HermesVolunteerBoard\app',
  [string]$DataRoot='C:\ProgramData\HermesVolunteerBoard',
  [string]$NodeExe='C:\Program Files\nodejs\node.exe',
@@ -34,14 +34,14 @@ switch($Action) {
  'install' {
   $principal=New-ScheduledTaskPrincipal -UserId 'S-1-5-19' -LogonType ServiceAccount
   $settings=New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-  foreach($kind in @('App','Tunnel','Backup','Health')) {
+  foreach($kind in @('App','Backup','Health')) {
    $taskName=$taskPrefix+$kind
    # Reinstallation preserves operational enabled/disabled state.
    $previous=Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-   $disabled=if($previous){$previous.State -eq 'Disabled'}else{$kind -eq 'Tunnel'}
+   $disabled=if($previous){$previous.State -eq 'Disabled'}else{$false}
    $args='-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+(Join-Path $AppRoot 'scripts\windows\run.ps1')+'" -Kind '+$kind.ToLower()+' -AppRoot "'+$AppRoot+'" -DataRoot "'+$DataRoot+'" -NodeExe "'+$NodeExe+'"'
    $actionDef=New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument $args -WorkingDirectory $AppRoot
-   if($kind -in @('App','Tunnel')){
+   if($kind -eq 'App'){
     # Periodic activation recovers even manually launched tasks; IgnoreNew prevents duplicates.
     $triggers=@((New-ScheduledTaskTrigger -AtStartup),(New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)))
    }
@@ -75,11 +75,5 @@ switch($Action) {
   & (Join-Path (Split-Path $NodeExe) 'npm.cmd') run build; Native-Check
   & (Join-Path (Split-Path $NodeExe) 'npm.cmd') audit --omit=dev; Native-Check
   Start-App
- }
- 'enable-tunnel' {
-  $config=Get-Content -LiteralPath (Join-Path $DataRoot 'config\tunnel.json') -Raw | ConvertFrom-Json
-  if(-not $config.enabled -or -not(Test-Path -LiteralPath $config.tokenFile)){throw 'Provision named tunnel config and protected token first'}
-  Enable-ScheduledTask -TaskName ($taskPrefix+'Tunnel') | Out-Null
-  Start-ScheduledTask -TaskName ($taskPrefix+'Tunnel')
  }
 }
