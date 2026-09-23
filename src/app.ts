@@ -5,6 +5,7 @@ import Database from "better-sqlite3";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { AppConfig } from "./config.js";
 import { openDatabase } from "./db/connection.js";
+import { databaseReady } from "./operations.js";
 import { VolunteerBoard } from "./domain/board.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerPublicRoutes } from "./routes/public.js";
@@ -45,6 +46,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     root: resolve(process.cwd(), "public"),
     prefix: "/assets/",
     wildcard: false,
+  });
+  app.get("/ready", async (_request, reply) => {
+    const ok = databaseReady(db);
+    return reply.code(ok ? 200 : 503).send({ ok });
   });
   await registerPublicRoutes(app, board);
   await registerTwilioInbound(app, { config: options.config, board, smsSender });
