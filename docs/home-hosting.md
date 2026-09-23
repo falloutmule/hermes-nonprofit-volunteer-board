@@ -28,7 +28,7 @@ $manage = 'C:\Services\HermesVolunteerBoard\app\scripts\windows\manage.ps1'
 & $manage -Action update -Revision '<full-tested-commit-already-present-in-checkout>'
 ```
 
-Tasks are `HermesVolunteerBoard-App`, `-Tunnel`, `-Backup`, `-Health`, running as LOCAL SERVICE, independent of interactive login. App/tunnel use startup triggers. Backup runs every six hours and at boot; health every five minutes and at boot. Single-instance tasks retry failures after one minute, with no execution time limit. Reinstall preserves task enabled/disabled state. Unrelated Hermes tasks are not modified.
+Tasks are `HermesVolunteerBoard-App`, `-Tunnel`, `-Backup`, `-Health`, running as LOCAL SERVICE, independent of interactive login. App/tunnel use startup triggers plus one-minute recovery activation with IgnoreNew, so an already-running instance is not duplicated. Backup runs every six hours and at boot; health every five minutes and at boot. Single-instance tasks retry failures after one minute, with no execution time limit. Reinstall preserves task enabled/disabled state. Unrelated Hermes tasks are not modified.
 
 Stop disables app automatic restart, requests shutdown through the protected stop file, and waits for the PID file to disappear. Do not force a restore if stop fails. START re-enrollment and its duplicate-reply repair are unchanged.
 

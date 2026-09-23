@@ -41,7 +41,10 @@ switch($Action) {
    $disabled=if($previous){$previous.State -eq 'Disabled'}else{$kind -eq 'Tunnel'}
    $args='-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+(Join-Path $AppRoot 'scripts\windows\run.ps1')+'" -Kind '+$kind.ToLower()+' -AppRoot "'+$AppRoot+'" -DataRoot "'+$DataRoot+'" -NodeExe "'+$NodeExe+'"'
    $actionDef=New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument $args -WorkingDirectory $AppRoot
-   if($kind -in @('App','Tunnel')){$triggers=@(New-ScheduledTaskTrigger -AtStartup)}
+   if($kind -in @('App','Tunnel')){
+    # Periodic activation recovers even manually launched tasks; IgnoreNew prevents duplicates.
+    $triggers=@((New-ScheduledTaskTrigger -AtStartup),(New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)))
+   }
    else {
     $interval=if($kind -eq 'Backup'){New-TimeSpan -Hours 6}else{New-TimeSpan -Minutes 5}
     $triggers=@((New-ScheduledTaskTrigger -AtStartup),(New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval $interval))
