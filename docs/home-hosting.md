@@ -1,5 +1,7 @@
 # Home hosting and recovery
 
+Current connector: Tailscale Funnel. See [the Funnel operations guide](tailscale-funnel.md) for the active URL, preserved private routes, Twilio handoff, and laptop hostname limitations. The Cloudflare instructions below are an inactive alternative.
+
 ## Layout and configuration
 
 Windows code: `C:\Services\HermesVolunteerBoard\app` (detached, tested commit).
@@ -54,7 +56,7 @@ Keep AC sleep/hibernate disabled, keep the screen lock enabled, and ensure the n
 
 Boot acceptance requires the user to reboot and leave the PC at the sign-in screen. Check /ready from a separately available path (stable tunnel when provisioned), then after login inspect Task Scheduler start times and the host log timestamp for `started`/`ready_ok` before interactive login. Confirm backup task execution. Install/inspection or recovery of a killed process is NOT proof of reboot persistence. Record `LOCAL_BOOT_PENDING` until observed. Stable tunnel boot acceptance is separate and remains pending until a domain and connector exist.
 
-## Named tunnel: deferred until a domain exists
+## Cloudflare alternative: disabled, not the active connector
 
 No domain purchase, DNS change, named tunnel, or Twilio change occurs during local setup. The named-tunnel task is installed disabled. `config\tunnel.json` holds nonsecret executable/token-file paths and `enabled:false`; token contents belong only in the protected token file. Do not create a dummy token.
 
@@ -66,6 +68,6 @@ Verify public /ready and signature validation/idempotency with a disposable app/
 
 Inspect the laptop first; do not choose its OS in advance. On Windows repeat machine-level installation; on Linux create a dedicated nonlogin user and systemd app/tunnel units with `WorkingDirectory`, `Environment=CONFIG_FILE=...`, `Restart=on-failure`, protected paths, and network-online ordering. Use systemd timers for the same six-hour backup and five-minute health commands. Reuse `scripts/host.mjs` and `scripts/tunnel.mjs`, supplying Linux paths and installing the appropriate official cloudflared binary. Install Node dependencies fresh, never copy node_modules across OSes.
 
-Stop PC app and connector; take the final verified snapshot. Restore the laptop, transfer configuration securely, preserve the exact tested commit, then enable only the laptop connector on the SAME named tunnel. Never load-balance independent SQLite copies. Verify integrity, local/public readiness and signed webhook rejection/acceptance. No registration, policy or full phone canary repeat. Any real SMS sanity check needs separate authorization.
+Stop PC app and connector; take the final verified snapshot. Restore the laptop, transfer configuration securely, preserve the exact tested commit, then enable only the laptop connector. With Funnel, follow the hostname migration rules in tailscale-funnel.md; only a Cloudflare named tunnel can reuse the named-tunnel instructions here. Never load-balance independent SQLite copies. Verify integrity, local/public readiness and signed webhook rejection/acceptance. No registration, policy or full phone canary repeat. Any real SMS sanity check needs separate authorization.
 
 Rollback before new writes: stop laptop and restart original PC. After new writes: stop laptop, snapshot its authoritative database, restore that on the PC, then restart PC. Never discard newer consent/opt-out events by restoring a stale copy.
