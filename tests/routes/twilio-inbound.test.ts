@@ -46,7 +46,7 @@ describe("Twilio inbound route", () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.headers["content-type"]).toContain("text/xml");
-    expect(response.body).toContain("You're enrolled in volunteer SMS testing");
+    expect(response.body).toContain("You're enrolled in volunteer SMS coordination");
     expect(response.body).toContain("Msg &amp; data rates may apply");
     expect(scalar(db, "SELECT COUNT(*) AS value FROM consent_events")).toBe(1);
   });
@@ -198,9 +198,9 @@ describe("Twilio inbound route", () => {
         )
         .all(),
     ).toEqual([
-      { keyword: "HELP", source: "twilio_opt_out_type", policy_version: "2026-08-23" },
-      { keyword: "STOP", source: "twilio_opt_out_type", policy_version: "2026-08-23" },
-      { keyword: "START", source: "twilio_opt_out_type", policy_version: "2026-08-23" },
+      { keyword: "HELP", source: "twilio_opt_out_type", policy_version: "2026-09-23" },
+      { keyword: "STOP", source: "twilio_opt_out_type", policy_version: "2026-09-23" },
+      { keyword: "START", source: "twilio_opt_out_type", policy_version: "2026-09-23" },
     ]);
   });
 });

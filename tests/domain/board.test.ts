@@ -40,7 +40,7 @@ describe("deterministic board transitions", () => {
     expect(scalar(db, "SELECT COUNT(*) AS value FROM consent_events WHERE action = 'opt_in'")).toBe(1);
     expect(
       db.prepare("SELECT keyword, policy_version FROM consent_events").get(),
-    ).toEqual({ keyword: "JOIN", policy_version: "2026-08-23" });
+    ).toEqual({ keyword: "JOIN", policy_version: "2026-09-23" });
     expect(scalar(db, "SELECT COUNT(*) AS value FROM sms_events")).toBe(1);
     expect(db.prepare("PRAGMA table_info(sms_events)").all()).not.toContainEqual(
       expect.objectContaining({ name: "body" }),
@@ -125,7 +125,7 @@ describe("deterministic board transitions", () => {
     ).toEqual({ sms_status: "opted_in" });
     expect(
       db.prepare("SELECT keyword, policy_version FROM consent_events ORDER BY id DESC LIMIT 1").get(),
-    ).toEqual({ keyword: "START", policy_version: "2026-08-23" });
+    ).toEqual({ keyword: "START", policy_version: "2026-09-23" });
   });
 
   it("does not treat START as first-time enrollment", () => {

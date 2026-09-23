@@ -1,3 +1,5 @@
+> Update September23,2026: operator accepts home deployment complete following unattended reboot recovery. Earlier pending acceptance statements below are historical; no further reboot gate blocks product work. See HERMES-INTEGRATION-PHASE.md.
+
 # Hermes Non-Profit home operations
 
 Authoritative inventory: [HOME DEPLOYMENT](HERMES-NONPROFIT-HOME-DEPLOYMENT.md). Laptop procedure: [migration](laptop-migration.md).

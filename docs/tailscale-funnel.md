@@ -1,3 +1,5 @@
+> Update September23,2026: operator accepts home deployment complete following unattended reboot recovery. Earlier pending acceptance statements below are historical; no further reboot gate blocks product work. See HERMES-INTEGRATION-PHASE.md.
+
 # Tailscale Funnel
 
 The authoritative operating procedure is [home-hosting.md](home-hosting.md), inventory is [HERMES-NONPROFIT-HOME-DEPLOYMENT.md](HERMES-NONPROFIT-HOME-DEPLOYMENT.md), and portable migration package is [laptop-migration.md](laptop-migration.md).

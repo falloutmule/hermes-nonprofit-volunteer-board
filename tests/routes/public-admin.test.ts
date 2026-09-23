@@ -30,7 +30,7 @@ describe("public and admin routes", () => {
     }
     const home = await app.inject({ method: "GET", url: "/" });
     const operatorStatement =
-      "Hermes Non-Profit is an internal volunteer-system testing project";
+      "Hermes Non-Profit is a volunteer event coordination program";
     expect(home.body).toContain(operatorStatement);
     expect(home.body.replace(/\r\n/g, "\n")).toContain("operated by\n      sole proprietor Travis Omernick");
     expect(home.body).toContain("This website does not collect your phone number or SMS consent");
@@ -44,11 +44,12 @@ describe("public and admin routes", () => {
     expect(privacy.body).toContain(operatorStatement);
     expect(privacy.body).toContain("sole proprietor Travis Omernick");
     expect(privacy.body).toContain("do not share, sell, rent, or provide your mobile phone number");
-    expect(privacy.body).toContain("Effective August 23, 2026");
+    expect(privacy.body).toContain("Effective September 23, 2026");
     const terms = await app.inject({ method: "GET", url: "/terms/" });
     expect(terms.body).toContain(operatorStatement);
     expect(terms.body).toContain("sole proprietor Travis Omernick");
     expect(terms.body).toContain("Reply <strong>START</strong>");
+    expect(home.body + privacy.body + terms.body).not.toMatch(/SMS testing|test participants|per test event/i);
     expect(home.body + privacy.body + terms.body).not.toContain("DOCUMENT PENDING");
     expect((await app.inject({ method: "GET", url: "/styles.css" })).statusCode).toBe(200);
   });

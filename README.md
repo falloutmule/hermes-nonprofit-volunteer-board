@@ -1,8 +1,8 @@
 # Hermes Non-Profit Volunteer Board
 
-A low-volume internal-testing volunteer board. Volunteers discover events on a public calendar and use ordinary SMS to opt in, sign up, join standby, accept an opening, or drop a specific event. SQLite and deterministic domain functions are the sole operational source of truth.
+A home-hosted volunteer coordination board. Volunteers discover events on a public calendar and use ordinary SMS to opt in, sign up, join standby, accept an opening, or drop a specific event. SQLite and deterministic domain functions are the sole operational source of truth.
 
-> Compliance drafts are integrated, but this repository has no authorized remote or verified public deployment. Do not submit the A2P campaign until the public URLs are live, directly verified, and inserted into the campaign answer sheet.
+> Home deployment is accepted complete. Current consent disclosures describe volunteer coordination; campaign wording review remains a manual operator step before invitations. See docs/HERMES-INTEGRATION-PHASE.md.
 
 ## Requirements
 
@@ -69,11 +69,11 @@ POST   /api/admin/signups/:id/drop
 POST   /api/admin/messages/send
 ```
 
-The future Hermes integration must call this narrow API. It must not access SQLite directly or receive arbitrary public SMS content.
+The Hermes Non-Profit operator calls this narrow API. It must not access SQLite directly or receive arbitrary public SMS content.
 
 ## Public site and future Pages deployment
 
-The app serves `/`, `/calendar/`, `/privacy/`, `/terms/`, and `/styles.css`. The opt-in, Privacy, and Terms files are the integrated compliance drafts and use relative links compatible with a GitHub Pages project site. The calendar requests `/api/public/events`; a future static deployment must configure a reachable API origin or supply a generated event feed. No GitHub remote, Pages URL, or live deployment is assumed.
+The app serves `/`, `/calendar/`, `/privacy/`, `/terms/`, and `/styles.css`. The opt-in, Privacy, and Terms files are the integrated compliance drafts and use relative links compatible with a GitHub Pages project site. The calendar requests `/api/public/events`; a future static deployment must configure a reachable API origin or supply a generated event feed. GitHub Pages hosts the public disclosures; the live calendar is served by the home Board at its Funnel origin.
 
 ## Real versus synthetic status
 

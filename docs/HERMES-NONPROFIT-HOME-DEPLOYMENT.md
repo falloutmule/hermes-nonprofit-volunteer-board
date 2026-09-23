@@ -1,3 +1,5 @@
+> Update September23,2026: operator accepts home deployment complete following unattended reboot recovery. Earlier pending acceptance statements below are historical; no further reboot gate blocks product work. See HERMES-INTEGRATION-PHASE.md.
+
 # Hermes Non-Profit Volunteer Board — home deployment inventory
 
 Recorded 2026-09-23. Production home service; current Windows PC is authoritative. Laptop OS is UNDECIDED.

@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import { SMS_MESSAGES, offerMessage } from "./messages.js";
 import { parseSmsIntent } from "./sms-intent.js";
 
-export const CONSENT_POLICY_VERSION = "2026-08-23";
+export const CONSENT_POLICY_VERSION = "2026-09-23";
 
 export type EventStatus = "draft" | "published" | "cancelled" | "completed";
 export type SignupStatus = "confirmed" | "standby" | "cancelled";
@@ -546,7 +546,7 @@ export class VolunteerBoard {
     this.cancelSignup(signup, notifications);
     return {
       classification: `drop_${priorStatus}`,
-      reply: `Hermes Non-Profit: Your signup for ${event.name} has been cancelled. You remain enrolled in SMS testing. Reply STOP to opt out of all texts.`,
+      reply: `Hermes Non-Profit: Your signup for ${event.name} has been cancelled. You remain enrolled in volunteer SMS coordination. Reply STOP to opt out of all texts.`,
       notifications,
     };
   }
