@@ -131,6 +131,29 @@ describe("Twilio inbound route", () => {
     expect(unknown.body).toContain("didn't understand");
   });
 
+  it.each(["START", "start", "  StArT  "])("leaves the default Twilio START reply to Twilio without OptOutType (%s)", async (Body) => {
+    const base = { From: "+13035550113", To: "+19704708839" };
+    await postInbound({ ...base, Body: "JOIN", MessageSid: "SMDEFAULTJOIN" });
+    await postInbound({ ...base, Body: "STOP", MessageSid: "SMDEFAULTSTOP" });
+    const input = { ...base, Body, MessageSid: "SMDEFAULTSTART" };
+    const response = await postInbound(input);
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toBe('<?xml version="1.0" encoding="UTF-8"?><Response/>');
+    expect(db.prepare("SELECT sms_status FROM volunteers").get()).toEqual({ sms_status: "opted_in" });
+    expect(db.prepare("SELECT keyword, source FROM consent_events WHERE keyword = 'START'").all()).toEqual([
+      { keyword: "START", source: "twilio_inbound" },
+    ]);
+    expect(db.prepare("SELECT twilio_opt_out_type FROM sms_events WHERE classification = 'start'").get()).toEqual({ twilio_opt_out_type: null });
+    const duplicate = await postInbound(input);
+    expect(duplicate.statusCode).toBe(200);
+    expect(duplicate.body).toBe(response.body);
+    const repeated = await postInbound({ ...input, MessageSid: "SMDEFAULTSTARTAGAIN" });
+    expect(repeated.body).toBe(response.body);
+    expect(scalar(db, "SELECT COUNT(*) AS value FROM consent_events WHERE keyword = 'START'")).toBe(1);
+    expect(sender.messages).toHaveLength(0);
+    await postInbound({ ...base, Body: "STOP", MessageSid: "SMDEFAULTFINALSTOP" });
+    expect(db.prepare("SELECT sms_status FROM volunteers").get()).toEqual({ sms_status: "opted_out" });
+  });
   it("records managed OptOutType transitions without duplicating Twilio replies", async () => {
     const phone = "+13035550112";
     await postInbound({

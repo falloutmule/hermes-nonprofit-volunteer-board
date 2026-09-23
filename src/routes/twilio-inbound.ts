@@ -57,7 +57,10 @@ export async function registerTwilioInbound(
     });
     await deliverNotifications(dependencies.board, dependencies.smsSender, result.notifications);
     const response = new twilio.twiml.MessagingResponse();
-    if (result.reply && !request.body.OptOutType) response.message(result.reply);
+    // Default long-code START handling also replies without Advanced Opt-Out metadata.
+    // Keep processing consent above, but let Twilio own the confirmation.
+    const twilioHandlesReply = Boolean(request.body.OptOutType) || Body.trim().toUpperCase() === "START";
+    if (result.reply && !twilioHandlesReply) response.message(result.reply);
     return reply.type("text/xml; charset=utf-8").send(response.toString());
   });
 }
