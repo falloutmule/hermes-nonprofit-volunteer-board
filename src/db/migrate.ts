@@ -50,9 +50,16 @@ export function migrateDatabase(db: Database.Database): void {
       const target = table === 'event_completions' ? 'event_id' : 'id';
       for (const operation of ['INSERT','UPDATE']) {
         if (table === 'event_completions' && operation === 'UPDATE') continue;
+        let resultSql=details;
+        if (table==='events' && operation==='UPDATE') {
+          const safeFields:Record<string,string>={name:'name',slug:'slug',location:'location',startsAt:'starts_at',endsAt:'ends_at',timezone:'timezone',capacity:'capacity',status:'status',staffingEnabled:'staffing_enabled',standbyEnabled:'standby_enabled',completionReportRequired:'completion_report_required',completionStatement:'completion_statement',seriesId:'series_id',recurrenceRule:'recurrence_rule',occurrenceDate:'occurrence_date'};
+          resultSql=Object.entries(safeFields).reduce((sql,[key,column])=>`json_patch(${sql},CASE WHEN OLD.${column} IS NOT NEW.${column} THEN json_object('${key}',json_object('before',OLD.${column},'after',NEW.${column})) ELSE '{}' END)`,"'{}'");
+          resultSql=`json_patch(${resultSql},CASE WHEN OLD.description IS NOT NEW.description THEN json_object('descriptionChanged',json('true')) ELSE '{}' END)`;
+          db.exec('DROP TRIGGER IF EXISTS audit_events_UPDATE');
+        }
         db.exec(`CREATE TRIGGER IF NOT EXISTS audit_${table}_${operation} AFTER ${operation} ON ${table} BEGIN
           INSERT INTO activity(event_id,source,action,target,result,created_at)
-          VALUES (NEW.${eventColumn},(SELECT source FROM operation_context WHERE id=1),'${table}.${operation.toLowerCase()}', '${table}:' || NEW.${target},${details},strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+          VALUES (NEW.${eventColumn},(SELECT source FROM operation_context WHERE id=1),'${table}.${operation.toLowerCase()}', '${table}:' || NEW.${target},${resultSql},strftime('%Y-%m-%dT%H:%M:%fZ','now'));
         END;`);
       }
     }

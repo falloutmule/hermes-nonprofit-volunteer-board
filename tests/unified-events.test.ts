@@ -120,4 +120,36 @@ describe('unified events and completion',()=>{
     expect((await app.inject(request)).body).not.toContain('<Message>');
     await app.close();
   });
+  it('requires an explicit keyword after prior completion and retains completion detail on staffing',()=>{
+    const a=board.createEvent(input('SOCKS'));const b=board.createEvent(input('FOOD'));
+    sms('JOIN');sms('SOCKS');sms('FOOD');
+    expect(sms('DONE SOCKS').classification).toBe('done_completed');
+    expect(sms('DONE').classification).toBe('done_ambiguous');
+    expect(board.getEvent(b.id)?.status).toBe('published');
+    expect(sms('DONE SOCKS').classification).toBe('done_already_completed');
+    expect(board.getEvent(b.id)?.status).toBe('published');
+    expect(board.staffing(a.id).completion).toMatchObject({volunteerId:1,statement:'10 pairs of socks picked up'});
+    expect(sms('DONE FOOD').classification).toBe('done_completed');
+  });
+  it('includes task completion instructions after a standby offer is accepted',()=>{
+    board.createEvent(input('PICKUP'));for(let i=0;i<3;i++){sms('JOIN',i);sms('PICKUP',i);}
+    expect(sms('DROP PICKUP').notifications).toHaveLength(1);
+    expect(sms('NO',1).notifications).toHaveLength(1);
+    expect(sms('YES',2).reply).toContain('DONE PICKUP');
+    expect(sms('DONE PICKUP',2).classification).toBe('done_completed');
+    expect(sms('YES',1).classification).toBe('offer_missing');
+  });
+  it('audits changed safe event fields without copying private descriptions',()=>{
+    const event=board.createEvent(input('PANTRY',{location:'Old location',description:'private original'}));
+    board.updateEvent(event.id,{capacity:6,location:'New location',timezone:'UTC',startsAt:'2026-09-26T22:00:00.000Z',description:'private replacement',completionStatement:'Socks delivered'});
+    const row=db.prepare("SELECT result FROM activity WHERE action='events.update' ORDER BY id DESC LIMIT 1").get() as {result:string};
+    const delta=JSON.parse(row.result);
+    expect(delta.capacity).toEqual({before:1,after:6});
+    expect(delta.location).toEqual({before:'Old location',after:'New location'});
+    expect(delta.timezone).toEqual({before:'America/Denver',after:'UTC'});
+    expect(delta.startsAt.after).toBe('2026-09-26T22:00:00.000Z');
+    expect(delta.completionStatement.after).toBe('Socks delivered');expect(delta.descriptionChanged).toBe(true);
+    expect(delta.name).toBeUndefined();expect(row.result).not.toContain('private');
+  });
+
 });

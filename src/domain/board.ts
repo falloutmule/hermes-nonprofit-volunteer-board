@@ -302,6 +302,10 @@ export class VolunteerBoard {
       WHERE s.volunteer_id=? AND s.status='confirmed' AND e.completion_report_required=1 AND e.staffing_enabled=1
       AND e.status IN ('published','completed')`).all(volunteer.id) as EventRow[];
     const eligible=rows.filter(e=>e.status==='published');
+    // A delayed retry must never complete a different task after another task closed.
+    if (!keyword && eligible.length && rows.some(e=>e.status==='completed')) {
+      return answer('done_ambiguous','A previous assignment is already completed. To confirm another assignment, reply '+eligible.map(e=>`DONE ${e.slug} (${e.name})`).join('; '));
+    }
     const event=keyword ? rows.find(e=>e.slug===keyword) : eligible.length===1 ? eligible[0] : undefined;
     if (!event) {
       if (!keyword && eligible.length>1) return answer('done_ambiguous','Which assignment? '+eligible.map(e=>`${e.name}: DONE ${e.slug}`).join('; '));
@@ -325,7 +329,12 @@ export class VolunteerBoard {
     const reservedCount=(this.db.prepare("SELECT COUNT(*) n FROM standby_openings WHERE event_id=? AND status='pending'").get(eventId) as {n:number}).n;
     const confirmedCount=signups.filter(s=>s.status==='confirmed').length,standbyCount=signups.filter(s=>s.status==='standby').length;
     const event=this.getEvent(eventId);
-    return {signups,offers,confirmedCount,standbyCount,reservedCount,spotsAvailable:event?.staffingEnabled && event.status==='published' ? Math.max(0,event.capacity-confirmedCount-reservedCount):0};
+    return {signups,offers,completion:this.completion(eventId),confirmedCount,standbyCount,reservedCount,spotsAvailable:event?.staffingEnabled && event.status==='published' ? Math.max(0,event.capacity-confirmedCount-reservedCount):0};
+  }
+
+  private completion(eventId:number) {
+    return this.db.prepare(`SELECT c.volunteer_id volunteerId,COALESCE(v.display_name,'Volunteer #'||v.id) displayName,
+      c.completed_at completedAt,c.statement FROM event_completions c JOIN volunteers v ON v.id=c.volunteer_id WHERE c.event_id=?`).get(eventId)??null;
   }
 
   activity(after=0) {
@@ -335,8 +344,7 @@ export class VolunteerBoard {
     return this.db.transaction(() => {
       const events=this.listEvents().map(event=> {
         const {signups,offers,...counts}=this.staffing(event.id);
-        const completion=this.db.prepare(`SELECT c.volunteer_id volunteerId,COALESCE(v.display_name,'Volunteer #'||v.id) displayName,
-          c.completed_at completedAt,c.statement FROM event_completions c JOIN volunteers v ON v.id=c.volunteer_id WHERE c.event_id=?`).get(event.id)??null;
+        const completion=this.completion(event.id);
         return {...event,...counts,completion};
       });
       return {events,staffing:events.flatMap(e=>this.staffing(e.id).signups),offers:events.flatMap(e=>this.staffing(e.id).offers),activity:this.activity(),generatedAt:timestamp()};
@@ -726,7 +734,7 @@ export class VolunteerBoard {
     this.advanceOfferChain(event.id, notifications);
     return {
       classification: "offer_accepted",
-      reply: `Hermes Non-Profit: You're now confirmed for ${event.name}. Reply STOP to opt out.`,
+      reply: `Hermes Non-Profit: You're now confirmed for ${event.name}.${event.completion_report_required ? ` When finished, reply DONE ${event.slug}.` : ''} Reply STOP to opt out.`,
       notifications,
     };
   }
