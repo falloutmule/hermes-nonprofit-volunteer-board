@@ -28,8 +28,8 @@
           <h2>${escapeHtml(event.name)}</h2>
           <p><strong>${new Date(event.startsAt).toLocaleString()}</strong></p>
           <p>${escapeHtml(event.location || 'Location to be announced')}</p>
-          <p>${event.spotsAvailable} of ${event.capacity} spots currently available</p>
-          <a class="button" href="sms:+19704708839?body=${encodeURIComponent(event.slug)}">Text ${escapeHtml(event.slug)} to volunteer</a>
+          ${event.staffingEnabled ? `<p>${event.spotsAvailable} of ${event.capacity} spots currently available</p>
+          <a class="button" href="sms:+19704708839?body=${encodeURIComponent(event.slug)}">Text ${escapeHtml(event.slug)} to volunteer</a>` : '<p>No volunteer signup required.</p>'}
         </article>`).join('');
       })
       .catch(() => { root.innerHTML = '<p class="card">The event list is temporarily unavailable.</p>'; });

@@ -16,9 +16,17 @@ export interface EventInput {
   endsAt: string;
   capacity: number;
   status: EventStatus;
+  staffingEnabled?: boolean;
+  standbyEnabled?: boolean;
+  completionReportRequired?: boolean;
+  completionStatement?: string | null;
+  timezone?: string;
+  seriesId?: string | null;
+  recurrenceRule?: string | null;
+  occurrenceDate?: string | null;
 }
 
-export interface EventRecord {
+export interface EventRecord extends EventInput {
   id: number;
   slug: string;
   name: string;
@@ -70,6 +78,14 @@ interface EventRow {
   ends_at: string;
   capacity: number;
   status: EventStatus;
+  staffing_enabled: number;
+  standby_enabled: number;
+  completion_report_required: number;
+  completion_statement: string | null;
+  timezone: string;
+  series_id: string | null;
+  recurrence_rule: string | null;
+  occurrence_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +123,9 @@ function toEvent(row: EventRow): EventRecord {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    staffingEnabled: Boolean(row.staffing_enabled), standbyEnabled: Boolean(row.standby_enabled),
+    completionReportRequired: Boolean(row.completion_report_required), completionStatement: row.completion_statement,
+    timezone: row.timezone, seriesId: row.series_id, recurrenceRule: row.recurrence_rule, occurrenceDate: row.occurrence_date,
   };
 }
 
@@ -115,6 +134,7 @@ export class VolunteerBoard {
 
   processInbound(input: ProcessInboundInput): ProcessResult {
     return this.db.transaction(() => {
+      this.db.prepare("UPDATE operation_context SET source='sms' WHERE id=1").run();
       const createdAt = timestamp();
       const inserted = this.db
         .prepare(
@@ -148,6 +168,9 @@ export class VolunteerBoard {
       let result: Omit<ProcessResult, "duplicate">;
 
       switch (intent.kind) {
+        case "done":
+          result = this.completeBySms(volunteer, intent.eventKeyword);
+          break;
         case "join":
           result = this.join(volunteer, input.messageSid, "JOIN", consentSource);
           break;
@@ -195,62 +218,132 @@ export class VolunteerBoard {
     })();
   }
 
+  private validateEvent(input: EventInput, id?: number): void {
+    if (/^(JOIN|HELP|STOP|START|DROP|YES|NO|DONE)$/i.test(input.slug)) throw new Error("Reserved event keyword");
+    if (!Number.isInteger(input.capacity) || input.capacity < 0 || input.endsAt <= input.startsAt) throw new Error("Invalid event definition");
+    try { new Intl.DateTimeFormat('en-US', {timeZone:input.timezone ?? 'America/Denver'}); } catch { throw new Error("Invalid timezone"); }
+    if (input.completionReportRequired && (!input.staffingEnabled || !input.completionStatement?.trim())) throw new Error("Completion reporting requires staffing and an approved statement");
+    if (input.standbyEnabled && !input.staffingEnabled) throw new Error("Standby requires staffing");
+    if (!!input.seriesId !== !!input.occurrenceDate) throw new Error("Series identity requires occurrence date");
+    if (input.recurrenceRule) { try { JSON.parse(input.recurrenceRule); } catch { throw new Error("Invalid recurrence JSON"); } }
+    if (id) {
+      const counts=this.db.prepare("SELECT SUM(status='confirmed') confirmed,SUM(status IN ('confirmed','standby')) active FROM signups WHERE event_id=?").get(id) as {confirmed:number;active:number};
+      const reserved=Number((this.db.prepare("SELECT COUNT(*) n FROM standby_openings WHERE event_id=? AND status='pending'").get(id) as {n:number}).n);
+      if (!input.staffingEnabled && counts.active) throw new Error("Resolve active commitments before disabling staffing");
+      if (input.capacity < (counts.confirmed ?? 0)+reserved) throw new Error("Capacity cannot be below commitments and reserved openings");
+      if (!input.standbyEnabled && reserved) throw new Error("Resolve pending offers before disabling standby");
+    }
+  }
+
   createEvent(input: EventInput): EventRecord {
-    const now = timestamp();
-    const slug = input.slug.trim().toUpperCase();
-    const result = this.db
-      .prepare(
-        `INSERT INTO events
-          (slug, name, description, location, starts_at, ends_at, capacity, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        slug,
-        input.name,
-        input.description ?? null,
-        input.location ?? null,
-        input.startsAt,
-        input.endsAt,
-        input.capacity,
-        input.status,
-        now,
-        now,
-      );
-    return this.getEvent(Number(result.lastInsertRowid)) as EventRecord;
+    return this.db.transaction(() => {
+      this.db.prepare("UPDATE operation_context SET source='admin_api' WHERE id=1").run();
+      this.validateEvent(input);
+      const now=timestamp();
+      const result=this.db.prepare(`INSERT INTO events(slug,name,description,location,starts_at,ends_at,capacity,status,
+        staffing_enabled,standby_enabled,completion_report_required,completion_statement,timezone,series_id,recurrence_rule,occurrence_date,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(input.slug.trim().toUpperCase(),input.name,input.description??null,input.location??null,
+        input.startsAt,input.endsAt,input.capacity,input.status,Number(input.staffingEnabled??false),Number(input.standbyEnabled??false),
+        Number(input.completionReportRequired??false),input.completionStatement??null,input.timezone??'America/Denver',input.seriesId??null,
+        input.recurrenceRule??null,input.occurrenceDate??null,now,now);
+      return this.getEvent(Number(result.lastInsertRowid))!;
+    })();
   }
 
   updateEvent(id: number, patch: Partial<EventInput>): EventRecord | null {
-    const current = this.getEvent(id);
-    if (!current) return null;
-    const merged: EventInput = {
-      slug: patch.slug ?? current.slug,
-      name: patch.name ?? current.name,
-      description: patch.description === undefined ? current.description : patch.description,
-      location: patch.location === undefined ? current.location : patch.location,
-      startsAt: patch.startsAt ?? current.startsAt,
-      endsAt: patch.endsAt ?? current.endsAt,
-      capacity: patch.capacity ?? current.capacity,
-      status: patch.status ?? current.status,
-    };
-    this.db
-      .prepare(
-        `UPDATE events SET slug = ?, name = ?, description = ?, location = ?, starts_at = ?,
-          ends_at = ?, capacity = ?, status = ?, updated_at = ? WHERE id = ?`,
-      )
-      .run(
-        merged.slug.trim().toUpperCase(),
-        merged.name,
-        merged.description ?? null,
-        merged.location ?? null,
-        merged.startsAt,
-        merged.endsAt,
-        merged.capacity,
-        merged.status,
-        timestamp(),
-        id,
-      );
-    return this.getEvent(id);
+    return this.db.transaction(() => {
+      this.db.prepare("UPDATE operation_context SET source='admin_api' WHERE id=1").run();
+      const current=this.getEvent(id); if (!current) return null;
+      const merged={...current,...patch}; this.validateEvent(merged,id);
+      if (['completed','cancelled'].includes(current.status) && merged.status!==current.status) throw new Error("Closed events cannot be reopened");
+      this.db.prepare(`UPDATE events SET slug=?,name=?,description=?,location=?,starts_at=?,ends_at=?,capacity=?,status=?,
+        staffing_enabled=?,standby_enabled=?,completion_report_required=?,completion_statement=?,timezone=?,series_id=?,recurrence_rule=?,occurrence_date=?,updated_at=? WHERE id=?`)
+        .run(merged.slug.toUpperCase(),merged.name,merged.description,merged.location,merged.startsAt,merged.endsAt,merged.capacity,merged.status,
+          Number(merged.staffingEnabled),Number(merged.standbyEnabled),Number(merged.completionReportRequired),merged.completionStatement,
+          merged.timezone,merged.seriesId,merged.recurrenceRule,merged.occurrenceDate,timestamp(),id);
+      if (['completed','cancelled'].includes(merged.status)) this.closeOpenings(id);
+      return this.getEvent(id);
+    })();
   }
+
+  materializeSeries(seriesId:string, inputs:EventInput[]): EventRecord[] {
+    return this.db.transaction(() => inputs.map(input => {
+      if (input.seriesId!==seriesId || !input.occurrenceDate || input.status!=='draft') throw new Error("Only draft series occurrences can be prepared");
+      const existing=this.listEvents().find(e => (e.seriesId===seriesId && e.occurrenceDate===input.occurrenceDate) || e.slug===input.slug.toUpperCase());
+      if (!existing) return this.createEvent(input);
+      if (existing.seriesId===seriesId && existing.occurrenceDate===input.occurrenceDate) return existing;
+      if (existing.seriesId || ['name','startsAt','endsAt','capacity','location','status'].some(key => ((existing as any)[key] ?? null) !== ((input as any)[key] ?? null))) throw new Error("Existing occurrence differs; explicit organizer review required");
+      return this.updateEvent(existing.id,{seriesId,occurrenceDate:input.occurrenceDate,recurrenceRule:input.recurrenceRule??null,timezone:input.timezone??'America/Denver'})!;
+    }))();
+  }
+
+  updateSeries(seriesId:string,fromDate:string,patch:Partial<EventInput>): EventRecord[] {
+    return this.db.transaction(() => this.listEvents().filter(e=>e.seriesId===seriesId && e.occurrenceDate!>=fromDate && !['completed','cancelled'].includes(e.status)).map(e=>this.updateEvent(e.id,patch)!))();
+  }
+
+  updateOccurrences(seriesId:string,changes:{id:number;patch:Partial<EventInput>}[]):EventRecord[] {
+    return this.db.transaction(()=>changes.map(({id,patch})=>{
+      const event=this.getEvent(id);if(!event || event.seriesId!==seriesId)throw new Error("Occurrence is not in this series");
+      if(['id','slug','seriesId','occurrenceDate'].some(k=>k in patch))throw new Error("Occurrence identity cannot change");
+      return this.updateEvent(id,patch)!;
+    }))();
+  }
+
+  private closeOpenings(eventId:number):void {
+    const now=timestamp();
+    this.db.prepare("UPDATE standby_offers SET status='cancelled',responded_at=?,updated_at=? WHERE event_id=? AND status='pending'").run(now,now,eventId);
+    this.db.prepare("UPDATE standby_openings SET status='cancelled',updated_at=? WHERE event_id=? AND status='pending'").run(now,eventId);
+  }
+
+  private completeBySms(volunteer:VolunteerRow,keyword?:string):Omit<ProcessResult,'duplicate'> {
+    const answer=(classification:string,reply:string)=>({classification,reply,notifications:[]});
+    if (volunteer.sms_status!=='opted_in') return answer('done_requires_opt_in',SMS_MESSAGES.joinFirst);
+    const rows=this.db.prepare(`SELECT e.* FROM events e JOIN signups s ON s.event_id=e.id
+      WHERE s.volunteer_id=? AND s.status='confirmed' AND e.completion_report_required=1 AND e.staffing_enabled=1
+      AND e.status IN ('published','completed')`).all(volunteer.id) as EventRow[];
+    const eligible=rows.filter(e=>e.status==='published');
+    const event=keyword ? rows.find(e=>e.slug===keyword) : eligible.length===1 ? eligible[0] : undefined;
+    if (!event) {
+      if (!keyword && eligible.length>1) return answer('done_ambiguous','Which assignment? '+eligible.map(e=>`${e.name}: DONE ${e.slug}`).join('; '));
+      if (!keyword && eligible.length===0 && rows.some(e=>e.status==='completed')) return answer('done_already_completed','Your reportable assignments are already completed.');
+      return answer('done_not_found','No matching assigned task needs a completion report. Reply HELP for help.');
+    }
+    if (event.status==='completed') return answer('done_already_completed',`${event.name} is already completed.`);
+    const now=timestamp();
+    this.db.prepare('INSERT INTO event_completions(event_id,volunteer_id,statement,completed_at) VALUES(?,?,?,?)').run(event.id,volunteer.id,event.completion_statement!,now);
+    this.db.prepare("UPDATE events SET status='completed',updated_at=? WHERE id=? AND status='published'").run(now,event.id);
+    this.closeOpenings(event.id);
+    return answer('done_completed',`Hermes Non-Profit: Completed: ${event.completion_statement}`);
+  }
+
+  staffing(eventId:number) {
+    const signups=this.db.prepare(`SELECT s.id,s.event_id eventId,s.volunteer_id volunteerId,COALESCE(v.display_name,'Volunteer #'||v.id) displayName,
+      s.status,s.standby_position standbyPosition,s.created_at createdAt,s.updated_at updatedAt,s.cancelled_at cancelledAt
+      FROM signups s JOIN volunteers v ON v.id=s.volunteer_id WHERE s.event_id=? ORDER BY s.standby_position,s.id`).all(eventId) as {status:string}[];
+    const offers=this.db.prepare(`SELECT id,event_id eventId,volunteer_id volunteerId,signup_id signupId,status,offered_at offeredAt,responded_at respondedAt
+      FROM standby_offers WHERE event_id=? ORDER BY id`).all(eventId);
+    const reservedCount=(this.db.prepare("SELECT COUNT(*) n FROM standby_openings WHERE event_id=? AND status='pending'").get(eventId) as {n:number}).n;
+    const confirmedCount=signups.filter(s=>s.status==='confirmed').length,standbyCount=signups.filter(s=>s.status==='standby').length;
+    const event=this.getEvent(eventId);
+    return {signups,offers,confirmedCount,standbyCount,reservedCount,spotsAvailable:event?.staffingEnabled && event.status==='published' ? Math.max(0,event.capacity-confirmedCount-reservedCount):0};
+  }
+
+  activity(after=0) {
+    return this.db.prepare('SELECT id,event_id eventId,source,action,target,result,created_at createdAt FROM activity WHERE id>? ORDER BY id').all(after);
+  }
+  projectionSnapshot() {
+    return this.db.transaction(() => {
+      const events=this.listEvents().map(event=> {
+        const {signups,offers,...counts}=this.staffing(event.id);
+        const completion=this.db.prepare(`SELECT c.volunteer_id volunteerId,COALESCE(v.display_name,'Volunteer #'||v.id) displayName,
+          c.completed_at completedAt,c.statement FROM event_completions c JOIN volunteers v ON v.id=c.volunteer_id WHERE c.event_id=?`).get(event.id)??null;
+        return {...event,...counts,completion};
+      });
+      return {events,staffing:events.flatMap(e=>this.staffing(e.id).signups),offers:events.flatMap(e=>this.staffing(e.id).offers),activity:this.activity(),generatedAt:timestamp()};
+    })();
+  }
+  pendingProjections() { return this.db.prepare('SELECT id,activity_id activityId,created_at createdAt FROM projection_outbox WHERE acknowledged_at IS NULL ORDER BY id LIMIT 500').all(); }
+  acknowledgeProjections(ids:number[]) { return this.db.transaction(()=>ids.reduce((n,id)=>n+this.db.prepare('UPDATE projection_outbox SET acknowledged_at=? WHERE id=? AND acknowledged_at IS NULL').run(timestamp(),id).changes,0))(); }
 
   getEvent(id: number): EventRecord | null {
     const row = this.db.prepare("SELECT * FROM events WHERE id = ?").get(id) as
@@ -282,10 +375,10 @@ export class VolunteerBoard {
     return rows.map((row) => ({
       ...toEvent(row),
       confirmedCount: Number(row.confirmed_count),
-      spotsAvailable: Math.max(
+      spotsAvailable: row.staffing_enabled ? Math.max(
         0,
         row.capacity - Number(row.confirmed_count) - Number(row.reserved_count),
-      ),
+      ) : 0,
     }));
   }
 
@@ -314,10 +407,11 @@ export class VolunteerBoard {
 
   dropSignupById(signupId: number): ProcessResult | null {
     return this.db.transaction(() => {
+      this.db.prepare("UPDATE operation_context SET source='admin_api' WHERE id=1").run();
       const signup = this.db.prepare("SELECT * FROM signups WHERE id = ?").get(signupId) as
         | SignupRow
         | undefined;
-      if (!signup || signup.status === "cancelled") return null;
+      if (!signup || signup.status === "cancelled" || this.getEvent(signup.event_id)?.status !== "published") return null;
       const notifications: Notification[] = [];
       this.cancelSignup(signup, notifications);
       return {
@@ -464,6 +558,7 @@ export class VolunteerBoard {
     if (!event) {
       return { classification: "unknown", reply: SMS_MESSAGES.unknown, notifications: [] };
     }
+    if (!event.staffing_enabled) return {classification:"signup_disabled",reply:"This event does not need volunteer signups.",notifications:[]};
     if (volunteer.sms_status !== "opted_in") {
       return {
         classification: "signup_requires_opt_in",
@@ -493,6 +588,7 @@ export class VolunteerBoard {
       .get(event.id, event.id) as { confirmed: number; reserved: number };
     const status: SignupStatus =
       counts.confirmed + counts.reserved < event.capacity ? "confirmed" : "standby";
+    if (status === "standby" && !event.standby_enabled) return {classification:"signup_full",reply:"This event is full and has no standby list.",notifications:[]};
     const standbyPosition =
       status === "standby"
         ? Number(
@@ -517,7 +613,7 @@ export class VolunteerBoard {
       classification: `signup_${status}`,
       reply:
         status === "confirmed"
-          ? `Hermes Non-Profit: You're signed up for ${event.name}. Reply DROP ${event.slug} to cancel this event. Reply STOP to opt out of all texts.`
+          ? `Hermes Non-Profit: You're signed up for ${event.name}.${event.completion_report_required ? ` When finished, reply DONE ${event.slug}.` : ''} Reply DROP ${event.slug} to cancel this event. Reply STOP to opt out of all texts.`
           : `Hermes Non-Profit: ${event.name} is full. You are standby position ${standbyPosition}. Reply STOP to opt out.`,
       notifications: [],
     };
@@ -530,7 +626,7 @@ export class VolunteerBoard {
     const event = this.db.prepare("SELECT * FROM events WHERE slug = ?").get(keyword) as
       | EventRow
       | undefined;
-    if (!event) {
+    if (!event || event.status !== "published") {
       return { classification: "drop_not_found", reply: SMS_MESSAGES.noSignup, notifications: [] };
     }
     const signup = this.db
@@ -568,7 +664,8 @@ export class VolunteerBoard {
         )
         .run(now, now, pendingOffer.id);
     }
-    if (signup.status === "confirmed") {
+    const event=this.getEvent(signup.event_id);
+    if (signup.status === "confirmed" && event?.status === "published" && event.standbyEnabled) {
       this.db
         .prepare(
           "INSERT INTO standby_openings(event_id, status, created_at, updated_at) VALUES (?, 'pending', ?, ?)",
@@ -596,7 +693,7 @@ export class VolunteerBoard {
       ).count,
     );
     const now = timestamp();
-    if (confirmed >= event.capacity || signup.status !== "standby") {
+    if (confirmed >= event.capacity || signup.status !== "standby" || event.status!=="published" || !event.staffing_enabled || !event.standby_enabled || volunteer.sms_status!=="opted_in") {
       this.db
         .prepare(
           "UPDATE standby_offers SET status = 'expired', responded_at = ?, updated_at = ? WHERE id = ? AND status = 'pending'",
@@ -658,6 +755,8 @@ export class VolunteerBoard {
   }
 
   private advanceOfferChain(eventId: number, notifications: Notification[]): void {
+    const event=this.getEvent(eventId);
+    if (!event || event.status!=="published" || !event.staffingEnabled || !event.standbyEnabled) return;
     const existingPending = this.db
       .prepare("SELECT id FROM standby_offers WHERE event_id = ? AND status = 'pending'")
       .get(eventId);

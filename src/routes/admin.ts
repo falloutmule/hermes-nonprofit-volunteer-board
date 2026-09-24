@@ -13,6 +13,14 @@ const EventFields = z.object({
     startsAt: z.iso.datetime(),
     endsAt: z.iso.datetime(),
     capacity: z.number().int().nonnegative(),
+    staffingEnabled: z.boolean().optional(),
+    standbyEnabled: z.boolean().optional(),
+    completionReportRequired: z.boolean().optional(),
+    completionStatement: z.string().trim().min(1).max(500).nullable().optional(),
+    timezone: z.string().max(100).optional(),
+    seriesId: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/).nullable().optional(),
+    recurrenceRule: z.string().max(2000).nullable().optional(),
+    occurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
     status: z.enum(["draft", "published", "cancelled", "completed"]),
   });
 
@@ -66,8 +74,8 @@ export async function registerAdminRoutes(
   app.post("/api/admin/events", async (request, reply) => {
     const input = parsed(EventSchema, request.body, reply);
     if (!input) return;
-    const event = dependencies.board.createEvent(input as EventInput);
-    return reply.code(201).send(event);
+    try { return reply.code(201).send(dependencies.board.createEvent(input as EventInput)); }
+    catch { return reply.code(409).send({error:"Event conflicts with existing state or validation rules"}); }
   });
 
   app.patch<{ Params: { id: string } }>("/api/admin/events/:id", async (request, reply) => {
@@ -89,7 +97,8 @@ export async function registerAdminRoutes(
     if (!merged.success) {
       return reply.code(400).send({ error: "Invalid request", issues: merged.error.issues });
     }
-    return dependencies.board.updateEvent(id, patch as Partial<EventInput>);
+    try { return dependencies.board.updateEvent(id, patch as Partial<EventInput>); }
+    catch { return reply.code(409).send({error:"Event conflicts with existing commitments or validation rules"}); }
   });
 
   app.get<{ Params: { id: string } }>("/api/admin/events/:id/signups", async (request, reply) => {
@@ -97,6 +106,38 @@ export async function registerAdminRoutes(
     if (id === null) return;
     if (!dependencies.board.getEvent(id)) return reply.code(404).send({ error: "Event not found" });
     return { signups: dependencies.board.listSignups(id) };
+  });
+
+  app.get<{Params:{id:string}}>("/api/admin/events/:id/staffing",async(request,reply)=>{
+    const id=parsed(IdSchema,request.params.id,reply); if(id===null)return;
+    if(!dependencies.board.getEvent(id))return reply.code(404).send({error:"Event not found"});
+    return dependencies.board.staffing(id);
+  });
+  app.get("/api/admin/projection/snapshot",async()=>dependencies.board.projectionSnapshot());
+  app.get("/api/admin/projection/pending",async()=>({pending:dependencies.board.pendingProjections()}));
+  app.post("/api/admin/projection/ack",async(request,reply)=>{
+    const input=parsed(z.object({ids:z.array(z.number().int().positive()).max(500)}),request.body,reply);if(!input)return;
+    return {acknowledged:dependencies.board.acknowledgeProjections(input.ids)};
+  });
+  app.get<{Querystring:{after?:string}}>("/api/admin/projection/activity",async(request,reply)=>{
+    const after=parsed(z.coerce.number().int().nonnegative(),request.query.after??0,reply);if(after===null)return;
+    return {activity:dependencies.board.activity(after)};
+  });
+  app.post<{Params:{seriesId:string}}>("/api/admin/series/:seriesId/occurrences",async(request,reply)=>{
+    const input=parsed(z.object({events:z.array(EventSchema).min(1).max(52)}),request.body,reply);if(!input)return;
+    try {return {events:dependencies.board.materializeSeries(request.params.seriesId,input.events as EventInput[])};}
+    catch{return reply.code(409).send({error:"Series occurrence conflicts with existing event; review required"});}
+  });
+  app.patch<{Params:{seriesId:string}}>("/api/admin/series/:seriesId",async(request,reply)=>{
+    if (request.body && typeof request.body==='object' && 'occurrenceChanges' in request.body) {
+      const changes=parsed(z.object({occurrenceChanges:z.array(z.object({id:IdSchema,patch:EventPatchSchema})).min(1).max(52)}),request.body,reply);if(!changes)return;
+      try{return {events:dependencies.board.updateOccurrences(request.params.seriesId,changes.occurrenceChanges as {id:number;patch:Partial<EventInput>}[])};}
+      catch{return reply.code(409).send({error:"Occurrence changes conflict with existing state"});}
+    }
+    const input=parsed(z.object({fromDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),patch:EventPatchSchema}),request.body,reply);if(!input)return;
+    if(['slug','seriesId','occurrenceDate','startsAt','endsAt'].some(k=>k in input.patch))return reply.code(400).send({error:"Identity/time changes require explicit occurrence-specific updates"});
+    try {return {events:dependencies.board.updateSeries(request.params.seriesId,input.fromDate,input.patch as Partial<EventInput>)};}
+    catch{return reply.code(409).send({error:"Series update conflicts with existing state"});}
   });
 
   app.post<{ Params: { id: string } }>("/api/admin/signups/:id/drop", async (request, reply) => {

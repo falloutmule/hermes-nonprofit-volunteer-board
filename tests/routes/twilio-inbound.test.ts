@@ -89,7 +89,7 @@ describe("Twilio inbound route", () => {
         startsAt: "2026-09-01T18:00:00.000Z",
         endsAt: "2026-09-01T20:00:00.000Z",
         capacity: 1,
-        status: "published",
+        status: "published", staffingEnabled: true, standbyEnabled: true,
       },
     });
     expect(event.statusCode).toBe(201);

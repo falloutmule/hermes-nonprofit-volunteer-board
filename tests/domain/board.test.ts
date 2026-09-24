@@ -20,7 +20,7 @@ function addEvent(slug = "PANTRY", capacity = 1) {
     startsAt: "2026-09-01T18:00:00.000Z",
     endsAt: "2026-09-01T20:00:00.000Z",
     capacity,
-    status: "published",
+    status: "published", staffingEnabled: true, standbyEnabled: true,
   });
 }
 

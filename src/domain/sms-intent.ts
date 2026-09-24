@@ -1,4 +1,5 @@
 export type SmsIntent =
+  | { kind: "done"; eventKeyword?: string }
   | { kind: "join" }
   | { kind: "help" }
   | { kind: "stop" }
@@ -15,6 +16,8 @@ export function normalizeSmsBody(body: string): string {
 
 export function parseSmsIntent(body: string): SmsIntent {
   const normalized = normalizeSmsBody(body);
+  if (normalized === "DONE") return { kind: "done" };
+  if (/^DONE [A-Z0-9][A-Z0-9_-]{1,63}$/.test(normalized)) return { kind: "done", eventKeyword: normalized.slice(5) };
   if (normalized === "JOIN") return { kind: "join" };
   if (normalized === "HELP") return { kind: "help" };
   if (normalized === "STOP") return { kind: "stop" };

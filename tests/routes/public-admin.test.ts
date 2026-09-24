@@ -67,7 +67,7 @@ describe("public and admin routes", () => {
         startsAt: "2026-10-01T18:00:00.000Z",
         endsAt: "2026-10-01T20:00:00.000Z",
         capacity: 4,
-        status: "published",
+        status: "published", staffingEnabled: true, standbyEnabled: true,
       },
     });
     expect(created.statusCode).toBe(201);
