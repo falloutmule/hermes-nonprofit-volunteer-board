@@ -1,3 +1,4 @@
+import {CategoryService,type CategoryInput} from "./categories.js";
 import type Database from "better-sqlite3";
 import { SMS_MESSAGES, offerMessage } from "./messages.js";
 import { parseSmsIntent } from "./sms-intent.js";
@@ -27,6 +28,7 @@ export interface EventInput {
 }
 
 export interface EventRecord extends EventInput {
+  categories:ReturnType<CategoryService["categories"]>;
   id: number;
   slug: string;
   name: string;
@@ -112,6 +114,7 @@ function timestamp(): string {
 
 function toEvent(row: EventRow): EventRecord {
   return {
+    categories:[],
     id: row.id,
     slug: row.slug,
     name: row.name,
@@ -130,7 +133,8 @@ function toEvent(row: EventRow): EventRecord {
 }
 
 export class VolunteerBoard {
-  constructor(private readonly db: Database.Database) {}
+  private readonly categoryService:CategoryService;
+  constructor(private readonly db: Database.Database) {this.categoryService=new CategoryService(db);}
 
   processInbound(input: ProcessInboundInput): ProcessResult {
     return this.db.transaction(() => {
@@ -167,7 +171,11 @@ export class VolunteerBoard {
       const consentSource = managedKeyword ? "twilio_opt_out_type" : "twilio_inbound";
       let result: Omit<ProcessResult, "duplicate">;
 
-      switch (intent.kind) {
+      const contextual=this.categoryService.handle(volunteer,managedKeyword??input.body,{
+        acceptGeneric:(id)=>this.acceptOffer(volunteer,id),declineGeneric:(id)=>this.declineOffer(volunteer,id),drop:(id)=>this.dropSignupById(id,'sms')
+      });
+      if(contextual)result=contextual;
+      else switch (intent.kind) {
         case "done":
           result = this.completeBySms(volunteer, intent.eventKeyword);
           break;
@@ -219,7 +227,8 @@ export class VolunteerBoard {
   }
 
   private validateEvent(input: EventInput, id?: number): void {
-    if (/^(JOIN|HELP|STOP|START|DROP|YES|NO|DONE)$/i.test(input.slug)) throw new Error("Reserved event keyword");
+    if(this.db.prepare("SELECT d.id FROM category_definitions d WHERE d.keyword=? COLLATE NOCASE AND (d.active=1 OR EXISTS(SELECT 1 FROM event_categories c JOIN events e ON e.id=c.event_id WHERE c.category_id=d.id AND c.active=1 AND e.starts_at>?))").get(input.slug,timestamp()))throw new Error("Event keyword conflicts with category");
+    if (/^(JOIN|HELP|STOP|START|DROP|YES|NO|DONE|NEXT)$/i.test(input.slug)) throw new Error("Reserved event keyword");
     if (!Number.isInteger(input.capacity) || input.capacity < 0 || input.endsAt <= input.startsAt) throw new Error("Invalid event definition");
     try { new Intl.DateTimeFormat('en-US', {timeZone:input.timezone ?? 'America/Denver'}); } catch { throw new Error("Invalid timezone"); }
     if (input.completionReportRequired && (!input.staffingEnabled || !input.completionStatement?.trim())) throw new Error("Completion reporting requires staffing and an approved statement");
@@ -246,6 +255,7 @@ export class VolunteerBoard {
         input.startsAt,input.endsAt,input.capacity,input.status,Number(input.staffingEnabled??false),Number(input.standbyEnabled??false),
         Number(input.completionReportRequired??false),input.completionStatement??null,input.timezone??'America/Denver',input.seriesId??null,
         input.recurrenceRule??null,input.occurrenceDate??null,now,now);
+      this.categoryService.applyDefaults(Number(result.lastInsertRowid));
       return this.getEvent(Number(result.lastInsertRowid))!;
     })();
   }
@@ -254,6 +264,8 @@ export class VolunteerBoard {
     return this.db.transaction(() => {
       this.db.prepare("UPDATE operation_context SET source='admin_api' WHERE id=1").run();
       const current=this.getEvent(id); if (!current) return null;
+      if(this.categoryService.hasCategories(id)&&patch.capacity!==undefined&&patch.capacity!==current.capacity)throw new Error("Category capacity must be changed through category configuration");
+      if(this.categoryService.hasCategories(id)&&patch.standbyEnabled!==undefined&&patch.standbyEnabled!==current.standbyEnabled)throw new Error("Standby is configured per category");
       const merged={...current,...patch}; this.validateEvent(merged,id);
       if (['completed','cancelled'].includes(current.status) && merged.status!==current.status) throw new Error("Closed events cannot be reopened");
       this.db.prepare(`UPDATE events SET slug=?,name=?,description=?,location=?,starts_at=?,ends_at=?,capacity=?,status=?,
@@ -262,6 +274,7 @@ export class VolunteerBoard {
           Number(merged.staffingEnabled),Number(merged.standbyEnabled),Number(merged.completionReportRequired),merged.completionStatement,
           merged.timezone,merged.seriesId,merged.recurrenceRule,merged.occurrenceDate,timestamp(),id);
       if (['completed','cancelled'].includes(merged.status)) this.closeOpenings(id);
+      this.categoryService.applyDefaults(id);
       return this.getEvent(id);
     })();
   }
@@ -287,6 +300,15 @@ export class VolunteerBoard {
       if(['id','slug','seriesId','occurrenceDate'].some(k=>k in patch))throw new Error("Occurrence identity cannot change");
       return this.updateEvent(id,patch)!;
     }))();
+  }
+
+  configureSeriesCategories(seriesId:string,effectiveFrom:string,categories:CategoryInput[],eventName?:string) {
+    const result=this.categoryService.configureSeries(seriesId,effectiveFrom,categories,eventName);
+    return {events:result.eventIds.map(id=>this.getEvent(id)),notifications:result.notifications};
+  }
+  configureEventCategories(eventId:number,categories:CategoryInput[]) {
+    const result=this.categoryService.configureEvent(eventId,categories);
+    return {events:result.eventIds.map(id=>this.getEvent(id)),notifications:result.notifications};
   }
 
   private closeOpenings(eventId:number):void {
@@ -322,14 +344,14 @@ export class VolunteerBoard {
 
   staffing(eventId:number) {
     const signups=this.db.prepare(`SELECT s.id,s.event_id eventId,s.volunteer_id volunteerId,COALESCE(v.display_name,'Volunteer #'||v.id) displayName,
-      s.status,s.standby_position standbyPosition,s.created_at createdAt,s.updated_at updatedAt,s.cancelled_at cancelledAt
-      FROM signups s JOIN volunteers v ON v.id=s.volunteer_id WHERE s.event_id=? ORDER BY s.standby_position,s.id`).all(eventId) as {status:string}[];
-    const offers=this.db.prepare(`SELECT id,event_id eventId,volunteer_id volunteerId,signup_id signupId,status,offered_at offeredAt,responded_at respondedAt
-      FROM standby_offers WHERE event_id=? ORDER BY id`).all(eventId);
+      s.status,s.standby_position standbyPosition,s.created_at createdAt,s.updated_at updatedAt,s.cancelled_at cancelledAt,s.category_id occurrenceCategoryId,c.category_id categoryId,d.keyword categoryKey,c.name categoryName
+      FROM signups s JOIN volunteers v ON v.id=s.volunteer_id LEFT JOIN event_categories c ON c.id=s.category_id LEFT JOIN category_definitions d ON d.id=c.category_id WHERE s.event_id=? ORDER BY s.standby_position,s.id`).all(eventId) as {status:string}[];
+    const offers=this.db.prepare(`SELECT o.id,o.event_id eventId,o.volunteer_id volunteerId,o.signup_id signupId,o.status,o.offered_at offeredAt,o.responded_at respondedAt,o.category_id occurrenceCategoryId,c.category_id categoryId,d.keyword categoryKey,c.name categoryName
+      FROM standby_offers o LEFT JOIN event_categories c ON c.id=o.category_id LEFT JOIN category_definitions d ON d.id=c.category_id WHERE o.event_id=? ORDER BY o.id`).all(eventId);
     const reservedCount=(this.db.prepare("SELECT COUNT(*) n FROM standby_openings WHERE event_id=? AND status='pending'").get(eventId) as {n:number}).n;
     const confirmedCount=signups.filter(s=>s.status==='confirmed').length,standbyCount=signups.filter(s=>s.status==='standby').length;
     const event=this.getEvent(eventId);
-    return {signups,offers,completion:this.completion(eventId),confirmedCount,standbyCount,reservedCount,spotsAvailable:event?.staffingEnabled && event.status==='published' ? Math.max(0,event.capacity-confirmedCount-reservedCount):0};
+    return {signups,offers,categories:this.categoryService.categories(eventId),completion:this.completion(eventId),confirmedCount,standbyCount,reservedCount,spotsAvailable:event?.staffingEnabled && event.status==='published' ? Math.max(0,event.capacity-confirmedCount-reservedCount):0};
   }
 
   private completion(eventId:number) {
@@ -338,7 +360,7 @@ export class VolunteerBoard {
   }
 
   activity(after=0) {
-    return this.db.prepare('SELECT id,event_id eventId,source,action,target,result,created_at createdAt FROM activity WHERE id>? ORDER BY id').all(after);
+    return this.db.prepare('SELECT id,event_id eventId,source,action,target,result,created_at createdAt,category_id occurrenceCategoryId,(SELECT category_id FROM event_categories WHERE id=activity.category_id) categoryId,category_key categoryKey,category_name categoryName FROM activity WHERE id>? ORDER BY id').all(after);
   }
   projectionSnapshot() {
     return this.db.transaction(() => {
@@ -357,12 +379,12 @@ export class VolunteerBoard {
     const row = this.db.prepare("SELECT * FROM events WHERE id = ?").get(id) as
       | EventRow
       | undefined;
-    return row ? toEvent(row) : null;
+    return row ? {...toEvent(row),categories:this.categoryService.categories(row.id)} : null;
   }
 
   listEvents(): EventRecord[] {
     return (this.db.prepare("SELECT * FROM events ORDER BY starts_at, id").all() as EventRow[]).map(
-      toEvent,
+      row=>({...toEvent(row),categories:this.categoryService.categories(row.id)}),
     );
   }
 
@@ -381,7 +403,7 @@ export class VolunteerBoard {
       )
       .all() as Array<EventRow & { confirmed_count: number; reserved_count: number }>;
     return rows.map((row) => ({
-      ...toEvent(row),
+      ...toEvent(row),categories:this.categoryService.categories(row.id),
       confirmedCount: Number(row.confirmed_count),
       spotsAvailable: row.staffing_enabled ? Math.max(
         0,
@@ -396,8 +418,8 @@ export class VolunteerBoard {
         `SELECT s.id, s.event_id AS eventId, s.volunteer_id AS volunteerId, s.status,
           s.standby_position AS standbyPosition, s.created_at AS createdAt,
           s.updated_at AS updatedAt, s.cancelled_at AS cancelledAt,
-          v.display_name AS displayName, v.sms_status AS smsStatus
-         FROM signups s JOIN volunteers v ON v.id = s.volunteer_id
+          v.display_name AS displayName, v.sms_status AS smsStatus, s.category_id AS occurrenceCategoryId,c.category_id AS categoryId,d.keyword AS categoryKey,c.name AS categoryName
+         FROM signups s JOIN volunteers v ON v.id = s.volunteer_id LEFT JOIN event_categories c ON c.id=s.category_id LEFT JOIN category_definitions d ON d.id=c.category_id
          WHERE s.event_id = ?
          ORDER BY CASE s.status WHEN 'confirmed' THEN 0 WHEN 'standby' THEN 1 ELSE 2 END,
                   s.standby_position, s.created_at, s.id`,
@@ -413,9 +435,9 @@ export class VolunteerBoard {
     );
   }
 
-  dropSignupById(signupId: number): ProcessResult | null {
+  dropSignupById(signupId: number,source="admin_api"): ProcessResult | null {
     return this.db.transaction(() => {
-      this.db.prepare("UPDATE operation_context SET source='admin_api' WHERE id=1").run();
+      this.db.prepare("UPDATE operation_context SET source=? WHERE id=1").run(source);
       const signup = this.db.prepare("SELECT * FROM signups WHERE id = ?").get(signupId) as
         | SignupRow
         | undefined;
@@ -551,7 +573,7 @@ export class VolunteerBoard {
           "UPDATE standby_offers SET status = 'cancelled', responded_at = ?, updated_at = ? WHERE id = ?",
         )
         .run(now, now, offer.id);
-      this.advanceOfferChain(offer.event_id, notifications);
+      if((offer as any).category_id)this.categoryService.advance((offer as any).category_id,notifications);else this.advanceOfferChain(offer.event_id, notifications);
     }
     return { classification: "stop", reply: SMS_MESSAGES.stopped, notifications };
   }
@@ -656,6 +678,7 @@ export class VolunteerBoard {
   }
 
   private cancelSignup(signup: SignupRow, notifications: Notification[]): void {
+    if((signup as any).category_id){this.categoryService.cancel(signup,notifications);return;}
     const now = timestamp();
     this.db
       .prepare(
@@ -683,10 +706,10 @@ export class VolunteerBoard {
     this.advanceOfferChain(signup.event_id, notifications);
   }
 
-  private acceptOffer(volunteer: VolunteerRow): Omit<ProcessResult, "duplicate"> {
+  private acceptOffer(volunteer: VolunteerRow,offerId?:number): Omit<ProcessResult, "duplicate"> {
     const offers = this.db
-      .prepare("SELECT * FROM standby_offers WHERE volunteer_id = ? AND status = 'pending'")
-      .all(volunteer.id) as OfferRow[];
+      .prepare("SELECT * FROM standby_offers WHERE volunteer_id = ? AND status = 'pending' AND (? IS NULL OR id=?)")
+      .all(volunteer.id,offerId??null,offerId??null) as OfferRow[];
     if (offers.length !== 1) {
       return { classification: "offer_missing", reply: SMS_MESSAGES.noOffer, notifications: [] };
     }
@@ -739,10 +762,10 @@ export class VolunteerBoard {
     };
   }
 
-  private declineOffer(volunteer: VolunteerRow): Omit<ProcessResult, "duplicate"> {
+  private declineOffer(volunteer: VolunteerRow,offerId?:number): Omit<ProcessResult, "duplicate"> {
     const offers = this.db
-      .prepare("SELECT * FROM standby_offers WHERE volunteer_id = ? AND status = 'pending'")
-      .all(volunteer.id) as OfferRow[];
+      .prepare("SELECT * FROM standby_offers WHERE volunteer_id = ? AND status = 'pending' AND (? IS NULL OR id=?)")
+      .all(volunteer.id,offerId??null,offerId??null) as OfferRow[];
     if (offers.length !== 1) {
       return { classification: "offer_missing", reply: SMS_MESSAGES.noOffer, notifications: [] };
     }
@@ -766,14 +789,14 @@ export class VolunteerBoard {
     const event=this.getEvent(eventId);
     if (!event || event.status!=="published" || !event.staffingEnabled || !event.standbyEnabled) return;
     const existingPending = this.db
-      .prepare("SELECT id FROM standby_offers WHERE event_id = ? AND status = 'pending'")
+      .prepare("SELECT id FROM standby_offers WHERE event_id = ? AND status = 'pending' AND category_id IS NULL")
       .get(eventId);
     if (existingPending) return;
 
     while (true) {
       const opening = this.db
         .prepare(
-          "SELECT id FROM standby_openings WHERE event_id = ? AND status = 'pending' ORDER BY id LIMIT 1",
+          "SELECT id FROM standby_openings WHERE event_id = ? AND status = 'pending' AND category_id IS NULL ORDER BY id LIMIT 1",
         )
         .get(eventId) as { id: number } | undefined;
       if (!opening) return;
@@ -783,7 +806,7 @@ export class VolunteerBoard {
            FROM signups s
            JOIN volunteers v ON v.id = s.volunteer_id
            JOIN events e ON e.id = s.event_id
-           WHERE s.event_id = ? AND s.status = 'standby' AND v.sms_status = 'opted_in'
+           WHERE s.event_id = ? AND s.category_id IS NULL AND s.status = 'standby' AND v.sms_status = 'opted_in'
              AND NOT EXISTS (
                SELECT 1 FROM standby_offers prior
                WHERE prior.opening_id = ? AND prior.signup_id = s.id

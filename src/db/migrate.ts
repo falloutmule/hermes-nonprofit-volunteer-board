@@ -1,3 +1,4 @@
+import {migrateCategories} from "./categories.js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type Database from "better-sqlite3";
@@ -65,4 +66,5 @@ export function migrateDatabase(db: Database.Database): void {
     }
     db.prepare("INSERT OR IGNORE INTO schema_migrations VALUES(3,?)").run(new Date().toISOString());
   })();
+  migrateCategories(db);
 }

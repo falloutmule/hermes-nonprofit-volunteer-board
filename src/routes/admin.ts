@@ -123,6 +123,17 @@ export async function registerAdminRoutes(
     const after=parsed(z.coerce.number().int().nonnegative(),request.query.after??0,reply);if(after===null)return;
     return {activity:dependencies.board.activity(after)};
   });
+  const CategorySchema=z.object({key:z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{1,31}$/),name:z.string().trim().min(1).max(100),capacity:z.number().int().min(0).max(10000),standbyEnabled:z.boolean(),active:z.boolean().optional(),sortOrder:z.number().int().nonnegative().optional()});
+  app.put<{Params:{seriesId:string}}>("/api/admin/series/:seriesId/categories",async(request,reply)=>{
+    const input=parsed(z.object({effectiveFrom:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),eventName:z.string().trim().min(1).max(200).optional(),categories:z.array(CategorySchema).min(1).max(20)}),request.body,reply);if(!input)return;
+    try {const result=dependencies.board.configureSeriesCategories(request.params.seriesId,input.effectiveFrom,input.categories,input.eventName);await deliverNotifications(dependencies.board,dependencies.smsSender,result.notifications);return {events:result.events};}
+    catch{return reply.code(409).send({error:"Category configuration conflicts with keywords, commitments or event history"});}
+  });
+  app.put<{Params:{id:string}}>("/api/admin/events/:id/categories",async(request,reply)=>{
+    const id=parsed(IdSchema,request.params.id,reply),input=parsed(z.object({categories:z.array(CategorySchema).min(1).max(20)}),request.body,reply);if(id===null||!input)return;
+    try {const result=dependencies.board.configureEventCategories(id,input.categories);await deliverNotifications(dependencies.board,dependencies.smsSender,result.notifications);return {events:result.events};}
+    catch{return reply.code(409).send({error:"Category configuration conflicts with keywords, commitments or event history"});}
+  });
   app.post<{Params:{seriesId:string}}>("/api/admin/series/:seriesId/occurrences",async(request,reply)=>{
     const input=parsed(z.object({events:z.array(EventSchema).min(1).max(52)}),request.body,reply);if(!input)return;
     try {return {events:dependencies.board.materializeSeries(request.params.seriesId,input.events as EventInput[])};}

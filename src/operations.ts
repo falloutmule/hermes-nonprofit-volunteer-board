@@ -2,11 +2,11 @@ import Database from "better-sqlite3";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, renameSync, statSync, unlinkSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-export const domainTables = ["volunteers", "consent_events", "events", "signups", "standby_openings", "standby_offers", "sms_events", "event_completions", "activity", "projection_outbox"];
+export const domainTables = ["volunteers", "consent_events", "events", "signups", "standby_openings", "standby_offers", "sms_events", "event_completions", "activity", "projection_outbox", "category_definitions", "category_defaults", "event_categories", "sms_context"];
 export function databaseReady(db: Database.Database): boolean {
   try {
     const versions = db.prepare("SELECT version FROM schema_migrations ORDER BY version").all() as {version: number}[];
-    if (versions.map(v => v.version).join(",") !== "1,2,3") return false;
+    if (versions.map(v => v.version).join(",") !== "1,2,3,4") return false;
     for (const table of domainTables) db.prepare(`SELECT 1 FROM ${table} LIMIT 1`).get();
     db.prepare("SELECT twilio_opt_out_type, twilio_message_sid FROM sms_events LIMIT 1").get();
     return true;

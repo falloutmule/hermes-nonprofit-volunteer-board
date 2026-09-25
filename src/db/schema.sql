@@ -74,10 +74,6 @@ CREATE TABLE IF NOT EXISTS standby_offers (
   updated_at TEXT NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS standby_offers_one_pending_per_event
-  ON standby_offers(event_id)
-  WHERE status = 'pending';
-
 CREATE UNIQUE INDEX IF NOT EXISTS standby_offers_one_pending_per_opening
   ON standby_offers(opening_id)
   WHERE status = 'pending';

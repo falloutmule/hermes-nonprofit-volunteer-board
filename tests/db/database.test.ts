@@ -21,7 +21,7 @@ describe("database", () => {
     let db = openDatabase(path);
     expect(
       db.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get(),
-    ).toEqual({ count: 3 });
+    ).toEqual({ count: 4 });
     db.close();
     db = openDatabase(path);
     const tables = db
@@ -123,7 +123,7 @@ describe("database", () => {
     ).toContain("twilio_opt_out_type");
     expect(
       upgraded.prepare("SELECT MAX(version) AS version FROM schema_migrations").get(),
-    ).toEqual({ version: 3 });
+    ).toEqual({ version: 4 });
     upgraded.close();
   });
 
