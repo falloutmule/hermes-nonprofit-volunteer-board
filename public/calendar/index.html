@@ -26,10 +26,16 @@
         }
         root.innerHTML = events.map((event) => `<article class="card">
           <h2>${escapeHtml(event.name)}</h2>
-          <p><strong>${new Date(event.startsAt).toLocaleString()}</strong></p>
+          <p><strong>${escapeHtml(new Date(event.startsAt).toLocaleString([], {timeZone: event.timezone || 'America/Denver', timeZoneName: 'short'}))}${event.endsAt ? ' – ' + escapeHtml(new Date(event.endsAt).toLocaleTimeString([], {timeZone: event.timezone || 'America/Denver', hour:'numeric',minute:'2-digit',timeZoneName:'short'})) : ''}</strong></p>
           <p>${escapeHtml(event.location || 'Location to be announced')}</p>
-          ${event.staffingEnabled ? `<p>${event.spotsAvailable} of ${event.capacity} spots currently available</p>
-          <a class="button" href="sms:+19704708839?body=${encodeURIComponent(event.slug)}">Text ${escapeHtml(event.slug)} to volunteer</a>` : '<p>No volunteer signup required.</p>'}
+          ${event.staffingEnabled ? (event.categories?.length ? `
+          <h3>Volunteer opportunities</h3>
+          ${event.categories.filter(category => category.active).sort((a,b) => a.sortOrder-b.sortOrder).map(category => `<section>
+            <p><strong>${escapeHtml(category.name)}</strong> — ${category.spotsAvailable > 0 ? `${category.spotsAvailable} spots` : 'Full'}${category.reservedCount ? ` · ${category.reservedCount} reserved` : ''}</p>
+            ${category.signupEligible ? `<a class="button" href="sms:+19704708839?body=${encodeURIComponent(category.key)}">Text ${escapeHtml(category.key)}${category.spotsAvailable ? ' to volunteer' : ' for standby'}</a>` : '<p>Signup is closed.</p>'}
+          </section>`).join('')}
+          <p>New to volunteer SMS? Text JOIN first. Then choose a category and Saturday.</p>` : `<p>${event.spotsAvailable} of ${event.capacity} spots currently available</p>
+          <a class="button" href="sms:+19704708839?body=${encodeURIComponent(event.slug)}">Text ${escapeHtml(event.slug)} to volunteer</a>`) : '<p>No volunteer signup required.</p>'}
         </article>`).join('');
       })
       .catch(() => { root.innerHTML = '<p class="card">The event list is temporarily unavailable.</p>'; });
